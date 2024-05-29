@@ -1,0 +1,5 @@
+debug.env
+.venv
+venv
+src/debug
+__pycache__
