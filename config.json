@@ -1,0 +1,14 @@
+{
+  "name": "Project Versioning System",
+  "description": "Creates project snapshots and allows to restore them.",
+  "type": "app",
+  "version": "2.0.0",
+  "categories": ["system"],
+  "docker_image": "supervisely/system:6.73.93",
+  "min_instance_version": "6.9.22",
+  "main_script": "src/main.py",
+  "task_location": "workspace_tasks",
+  "headless": true,
+  "icon": "https://www.shutterstock.com/image-vector/geometric-minimal-line-art-letter-600nw-1207791553.jpg",
+  "icon_cover": true
+}
