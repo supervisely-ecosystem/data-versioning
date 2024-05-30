@@ -7,62 +7,80 @@ from supervisely._utils import batched
 from supervisely.project.project import Project, _maybe_append_image_extension
 
 
-def create_project_mapping(api: sly.Api, project_id: int, project_version: int, download_dir: str):
+def create_project_map(api: sly.Api, project_id: int, project_version: int):
     """
     Create a mapping of project items to datasets
 
     :param api: sly.Api object
     :param project_id: int
-    :param download_dir: str
     :return: dict
     """
-    project = api.project.get_info_by_id(project_id)
-    project_mapping = {}
+
+    project_map = {"datasets": {}, "items": {}}
+
     for parents, dataset_info in api.dataset.tree(project_id):
-        dataset_mapping = {}
+        parent_id = parents[-1] if parents else 0
+        project_map["datasets"][dataset_info.id] = {
+            "name": dataset_info.name,
+            "version": project_version,
+            "parent": parent_id,
+        }
+
         for image in api.image.get_list(dataset_info.id):
             version_info = {
                 "name": image.name,
                 "hash": image.hash,
                 "updated_at": image.updated_at,
                 "version": project_version,
+                "parent": dataset_info.id,
+                "status": "new",
             }
-            dataset_mapping[image.id] = {"type": "image", "info": version_info}
-
-        current_level = project_mapping
-        for parent in parents:
-            current_level = current_level.setdefault(parent, {})
-        current_level[dataset_info.id] = {
-            "type": "dataset",
-            "items": dataset_mapping,
-            "name": dataset_info.name,
-        }
-
-    json_path = os.path.join(download_dir, f"{project.id}_mapping.json")
-    sly.json.dump_json_file(project_mapping, json_path)
-    return project_mapping
+            project_map["items"][image.id] = version_info
+    return project_map
 
 
-def diff_and_update_maps(old_map, new_map):
+def diff_and_update_maps(old_map, new_map, new_version):
     """
-    Compare two maps and update the version of image.id in version_info if its updated_at is the same
+    Compare two maps and update items info. Return updated map, new item ids and deleted item ids.
 
     :param old_map: dict
     :param new_map: dict
-    :return: tuple (updated new_map, list of image ids with updated version)
+    :param new_version: int
+    :return: tuple
     """
-    updated_image_ids = []
-    for dataset_id, dataset_info in new_map.items():
-        if dataset_id in old_map:
-            for image_id, image_info in dataset_info["items"].items():
-                if image_id in old_map[dataset_id]["items"]:
-                    old_image_info = old_map[dataset_id]["items"][image_id]["info"]
-                    new_image_info = image_info["info"]
-                    if new_image_info["updated_at"] == old_image_info["updated_at"]:
-                        new_image_info["version"] = old_image_info["version"]
-                    else:
-                        updated_image_ids.append(image_id)
-    return new_map, updated_image_ids
+    if not old_map or not new_map:
+        raise ValueError("Both old_map and new_map must be provided")
+
+    old_items = {str(k): v for k, v in old_map.get("items", {}).items()}
+    new_items = {str(k): v for k, v in new_map.get("items", {}).items()}
+    deleted_items = set(old_items) - set(new_items)
+
+    new_item_ids = []
+    deleted_item_ids = []
+
+    for image_id, image_info in new_items.items():
+        if str(image_id) in old_items:
+            if old_items[str(image_id)].get("updated_at") != image_info.get("updated_at"):
+                old_items[str(image_id)]["status"] = "new"
+                old_items[str(image_id)]["version"] = new_version
+                old_items[str(image_id)]["updated_at"] = image_info.get("updated_at")
+                new_item_ids.append(image_id)
+            else:
+                old_items[str(image_id)]["status"] = "unchanged"
+        else:
+            image_info["status"] = "new"
+            old_items[str(image_id)] = image_info
+            new_item_ids.append(image_id)
+
+    for item_id in deleted_items:
+        if old_items[item_id]["status"] != "deleted":
+            old_items[item_id]["status"] = "deleted"
+            old_items[item_id]["version"] = new_version
+            deleted_item_ids.append(item_id)
+
+    old_map["items"] = old_items
+
+    return old_map, new_item_ids, deleted_item_ids
 
 
 def download_dataset(
