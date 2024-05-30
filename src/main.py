@@ -61,7 +61,9 @@ def main():
         unit="B",
         unit_scale=True,
     )
-    api.file.upload(project_info.team_id, zst_archive_path, remote_path, progress_cb)
+    uploade_file_info = api.file.upload(
+        project_info.team_id, zst_archive_path, remote_path, progress_cb
+    )
     progress_cb.close()
 
     project_info.custom_data["project-mapping"] = project_mapping
@@ -70,6 +72,8 @@ def main():
     sly.fs.silent_remove(archive_path)
     sly.fs.silent_remove(zst_archive_path)
     sly.fs.remove_dir(download_dir)
+
+    api.app.set_output_directory(api.task_id, uploade_file_info.id, os.path.dirname(remote_path))
 
 
 if __name__ == "__main__":

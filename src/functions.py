@@ -1,4 +1,3 @@
-import os
 from typing import List, Union
 
 import supervisely as sly
@@ -26,16 +25,17 @@ def create_project_map(api: sly.Api, project_id: int, project_version: int):
             "parent": parent_id,
         }
 
-        for image in api.image.get_list(dataset_info.id):
-            version_info = {
-                "name": image.name,
-                "hash": image.hash,
-                "updated_at": image.updated_at,
-                "version": project_version,
-                "parent": dataset_info.id,
-                "status": "new",
-            }
-            project_map["items"][image.id] = version_info
+        for image_list in api.image.get_list_generator(dataset_info.id):
+            for image in image_list:
+                version_info = {
+                    "name": image.name,
+                    "hash": image.hash,
+                    "updated_at": image.updated_at,
+                    "version": project_version,
+                    "parent": dataset_info.id,
+                    "status": "new",
+                }
+                project_map["items"][image.id] = version_info
     return project_map
 
 
@@ -55,28 +55,29 @@ def diff_and_update_maps(old_map, new_map, new_version):
     new_items = {str(k): v for k, v in new_map.get("items", {}).items()}
     deleted_items = set(old_items) - set(new_items)
 
-    new_item_ids = []
-    deleted_item_ids = []
+    new_item_ids = set()
+    deleted_item_ids = set()
 
     for image_id, image_info in new_items.items():
-        if str(image_id) in old_items:
-            if old_items[str(image_id)].get("updated_at") != image_info.get("updated_at"):
-                old_items[str(image_id)]["status"] = "new"
-                old_items[str(image_id)]["version"] = new_version
-                old_items[str(image_id)]["updated_at"] = image_info.get("updated_at")
-                new_item_ids.append(image_id)
+        image_id_str = str(image_id)
+        if image_id_str in old_items:
+            if old_items[image_id_str].get("updated_at") != image_info.get("updated_at"):
+                old_items[image_id_str]["status"] = "new"
+                old_items[image_id_str]["version"] = new_version
+                old_items[image_id_str]["updated_at"] = image_info.get("updated_at")
+                new_item_ids.add(int(image_id_str))
             else:
-                old_items[str(image_id)]["status"] = "unchanged"
+                old_items[image_id_str]["status"] = "unchanged"
         else:
             image_info["status"] = "new"
-            old_items[str(image_id)] = image_info
-            new_item_ids.append(image_id)
+            old_items[image_id_str] = image_info
+            new_item_ids.add(int(image_id_str))
 
     for item_id in deleted_items:
         if old_items[item_id]["status"] != "deleted":
             old_items[item_id]["status"] = "deleted"
             old_items[item_id]["version"] = new_version
-            deleted_item_ids.append(item_id)
+            deleted_item_ids.add(item_id)
 
     old_map["items"] = old_items
 
@@ -100,12 +101,12 @@ def download_dataset(
 
     if item_ids is None:
         images_to_download = api.image.get_list(dataset_id)
-        item_ids = [img.id for img in images_to_download]
+        item_ids = {img.id for img in images_to_download}
     else:
         filters = [{"field": "id", "operator": "=", "value": id} for id in item_ids]
         images_to_download = api.image.get_list(dataset_id, filters)
 
-    ann_info_list = api.annotation.download_batch(dataset_id, item_ids)
+    ann_info_list = api.annotation.download_batch(dataset_id, list(item_ids))
     img_name_to_ann = {ann.image_id: ann.annotation for ann in ann_info_list}
     for img_info_batch in batched(images_to_download):
         images_nps = [None] * len(img_info_batch)
