@@ -12,7 +12,10 @@ def main():
             project_info, g.version_title, g.version_description
         )
         g.api.app.set_output_text(
-            g.TASK_ID, "New restore point created.", zmdi_icon="zmdi-time-restore"
+            g.TASK_ID,
+            "New restore point created",
+            description="Version",
+            zmdi_icon="zmdi-time-restore",
         )
     else:
         new_project_info = g.api.project.version.restore(project_info, g.target_version)
