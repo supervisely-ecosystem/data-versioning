@@ -1,2 +1,1 @@
-supervisely==6.73.93
-zstd
+git+https://github.com/supervisely/supervisely.git@project-versioning
