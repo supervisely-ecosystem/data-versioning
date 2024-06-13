@@ -7,6 +7,13 @@
   "docker_image": "supervisely/system:6.73.93",
   "min_instance_version": "6.9.22",
   "main_script": "src/main.py",
+  "modal_template": "src/modal.html",
+  "modal_template_state": {
+    "versionTitle": "",
+    "versionDescription": "",
+    "create": false,
+    "restore": false
+  },
   "task_location": "workspace_tasks",
   "headless": true,
   "context_menu": {

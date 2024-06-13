@@ -4,3 +4,4 @@ venv
 src/debug
 __pycache__
 download
+supervisely
