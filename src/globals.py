@@ -12,11 +12,11 @@ PROJECT_ID = int(os.getenv("PROJECT_ID"))
 api: sly.Api = sly.Api.from_env()
 
 action = "create" if bool(strtobool(os.environ.get("modal.state.create"))) else "restore"
-if action is "create":
+if action == "create":
     version_title = str(os.environ.get("modal.state.versionTitle"))
     version_description = str(os.environ.get("modal.state.versionDescription"))
     target_version = None
-elif action is "restore":
+elif action == "restore":
     version_title = None
     version_description = None
     target_version = int(os.environ.get("modal.state.targetVersion"))
