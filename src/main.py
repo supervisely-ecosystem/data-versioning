@@ -11,13 +11,23 @@ def main():
         project_version = g.api.project.version.create(
             project_info, g.version_title, g.version_description
         )
-        g.api.app.add_output_project(project_info, project_version)
-        g.api.app.set_output_text(
-            g.TASK_ID,
-            "New restore point created",
-            description="Version",
-            zmdi_icon="zmdi-time-restore",
-        )
+        if project_version is None:
+            g.api.app.set_output_text(
+                g.TASK_ID,
+                "There is no changes in the project. New restore point was not created.",
+                description="Version",
+                zmdi_icon="zmdi-close-circle",
+                icon_color="#FFA500",
+                background_color="#FFE8BE",
+            )
+        else:
+            g.api.app.add_output_project(project_info, project_version)
+            g.api.app.set_output_text(
+                g.TASK_ID,
+                "New restore point created",
+                description="Version",
+                zmdi_icon="zmdi-time-restore",
+            )
     else:
         new_project_info = g.api.project.version.restore(project_info, g.target_version)
         g.api.app.add_output_project(new_project_info)
