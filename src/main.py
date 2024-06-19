@@ -8,10 +8,10 @@ def main():
     project_info = g.api.project.get_info_by_id(g.PROJECT_ID)
     timer = TinyTimer()
     if g.action == "create":
-        project_version = g.api.project.version.create(
+        project_version_id = g.api.project.version.create(
             project_info, g.version_title, g.version_description
         )
-        if project_version is None:
+        if project_info.version and project_version_id == project_info.version.get("id"):
             g.api.app.set_output_text(
                 g.TASK_ID,
                 "There is no changes in the project. New restore point was not created.",
@@ -21,7 +21,7 @@ def main():
                 background_color="#FFE8BE",
             )
         else:
-            g.api.app.add_output_project(project_info, project_version)
+            g.api.app.add_output_project(project_info, project_version_id)
             g.api.app.set_output_text(
                 g.TASK_ID,
                 "New restore point created",
