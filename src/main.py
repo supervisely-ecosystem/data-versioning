@@ -17,11 +17,10 @@ def main():
             project_info, g.version_title, g.version_description
         )
         if project_info.version and project_version_id == version_id:
-            link = f"{g.api.server_address}/projects/{project_info.id}"
             g.api.app.set_output_text(
                 g.TASK_ID,
-                f"There is no changes in the project <a href={link}>{project_info.name}</a>",
-                description=f"New restore point was not created",
+                "New restore point was not created",
+                description=f"There is no changes in the project '{project_info.name}'",
                 zmdi_icon="zmdi-close-circle",
                 icon_color="#FFA500",
                 background_color="#FFE8BE",
@@ -29,12 +28,11 @@ def main():
         else:
             if version_num is None:
                 version_num = 0
-            link = f"{g.api.server_address}/projects/{project_info.id}/versions"
             g.api.app.add_output_project(project_info, project_version_id)
             g.api.app.set_output_text(
                 g.TASK_ID,
                 "New restore point created",
-                description=f"<a href={link}>Version {version_num + 1}</a>",
+                description=f"Version: {version_num + 1}",
                 zmdi_icon="zmdi-time-restore",
             )
     else:
