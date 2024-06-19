@@ -6,6 +6,7 @@ import globals as g
 
 def main():
     project_info = g.api.project.get_info_by_id(g.PROJECT_ID)
+    g.api.app.add_input_project(project_info)
     timer = TinyTimer()
     if project_info.version:
         version_id = project_info.version.get("id")
