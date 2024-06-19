@@ -27,6 +27,8 @@ def main():
                 background_color="#FFE8BE",
             )
         else:
+            if version_num is None:
+                version_num = 0
             link = f"{g.api.server_address}/projects/{project_info.id}/versions"
             g.api.app.add_output_project(project_info, project_version_id)
             g.api.app.set_output_text(
