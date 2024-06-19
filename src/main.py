@@ -20,7 +20,7 @@ def main():
             g.api.app.set_output_text(
                 g.TASK_ID,
                 "New restore point was not created",
-                description=f"There is no changes in the project '{project_info.name}'",
+                description=f'There are no changes in the project "{project_info.name}"',
                 zmdi_icon="zmdi-close-circle",
                 icon_color="#FFA500",
                 background_color="#FFE8BE",
