@@ -17,16 +17,7 @@ def main():
         project_version_id = g.api.project.version.create(
             project_info, g.version_title, g.version_description
         )
-        if project_info.version and project_version_id == version_id:
-            g.api.app.set_output_text(
-                g.TASK_ID,
-                "New restore point was not created",
-                description=f"No changes with the previous version. Project ID: {project_info.id}",
-                zmdi_icon="zmdi-close-circle",
-                icon_color="#FFA500",
-                background_color="#FFE8BE",
-            )
-        elif project_version_id == -1:
+        if project_version_id is None:
             g.api.app.set_output_text(
                 g.TASK_ID,
                 "New restore point was not created",
@@ -35,6 +26,16 @@ def main():
                 icon_color="#FFA500",
                 background_color="#FFE8BE",
             )
+        elif project_info.version and project_version_id == version_id:
+            g.api.app.set_output_text(
+                g.TASK_ID,
+                "New restore point was not created",
+                description=f"No changes with the previous version {version_num}. Project ID: {project_info.id}",
+                zmdi_icon="zmdi-close-circle",
+                icon_color="#FFA500",
+                background_color="#FFE8BE",
+            )
+
         else:
             if version_num is None:
                 version_num = 0
