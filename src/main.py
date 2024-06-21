@@ -6,7 +6,10 @@ import globals as g
 
 def main():
     project_info = g.api.project.get_info_by_id(g.PROJECT_ID)
-    g.api.app.add_input_project(project_info)
+    if g.action == "create":
+        g.api.app.add_input_project(project_info, task_id=g.TASK_ID)
+    else:
+        g.api.app.add_input_project(project_info, task_id=g.TASK_ID, version_num=g.version_num)
     timer = TinyTimer()
     if project_info.version:
         version_id = project_info.version.get("id")
