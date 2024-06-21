@@ -25,8 +25,8 @@ if action == "create":
     version_description = str(os.environ.get("modal.state.versionDescription"))
     if version_description == "":
         version_description = None
-    target_version = None
+    version_num = None
 elif action == "restore":
     version_title = None
     version_description = None
-    target_version = int(os.environ.get("modal.state.targetVersion"))
+    version_num = int(os.environ.get("modal.state.targetVersion"))

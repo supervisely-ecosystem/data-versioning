@@ -2,17 +2,17 @@
   <sly-card>
     <div
       class="fflex align-start"
-      style="flex-direction: column; margin: 20px 0 20px 0"
+      style="flex-direction: column; margin: 10px 0 10px 0"
     >
       <sly-field title="Select action">
         <el-checkbox
-          style="margin: 10px 10px 0 8px"
+          style="margin: 8px 0px 0 8px"
           v-model="state.create"
           v-if="!state.restore"
           >Create</el-checkbox
         >
         <el-checkbox
-          style="margin: 10px 10px 0 8px"
+          style="margin: 8px 0px 0 8px"
           v-model="state.restore"
           v-if="!state.create"
           >Restore</el-checkbox
@@ -28,10 +28,10 @@
           type="textarea"
         ></el-input>
       </sly-field>
-      <sly-field title="Version ID" v-if="state.restore">
+      <sly-field title="Version number" v-if="state.restore">
         <el-input-number
-          placeholder="Text"
           v-model="state.targetVersion"
+          :min="1"
         ></el-input-number>
       </sly-field>
     </div>
