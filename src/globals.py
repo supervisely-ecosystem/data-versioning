@@ -30,3 +30,8 @@ elif action == "restore":
     version_title = None
     version_description = None
     version_num = int(os.environ.get("modal.state.targetVersion"))
+
+
+create_meta = {"customRelationSettings": {"title": "<h4>Create Version</h4>"}}
+
+restore_meta = {"customRelationSettings": {"title": "<h4>Restore Version</h4>"}}
