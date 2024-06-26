@@ -53,8 +53,18 @@ def main():
             )
     else:
         new_project_info = g.api.project.version.restore(project_info, version_num=g.version_num)
-        g.api.app.add_output_project(new_project_info)
-        g.api.app.set_output_project(g.TASK_ID, new_project_info.id, new_project_info.name)
+        if new_project_info is None:
+            g.api.app.set_output_text(
+                g.TASK_ID,
+                "Project was not restored",
+                description="See logs for details",
+                zmdi_icon="zmdi-close-circle",
+                icon_color="#FFA500",
+                background_color="#FFE8BE",
+            )
+        else:
+            g.api.app.add_output_project(new_project_info)
+            g.api.app.set_output_project(g.TASK_ID, new_project_info.id, new_project_info.name)
     diff = timer.get_sec()
     sly.logger.debug(f"Project version {g.action} took {diff:.2f} sec")
 
