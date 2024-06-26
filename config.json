@@ -11,7 +11,8 @@
   "modal_template_state": {
     "actionType": "create",
     "title": "",
-    "description": ""
+    "description": "",
+    "version": 1
   },
   "task_location": "workspace_tasks",
   "headless": true,
