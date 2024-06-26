@@ -1,6 +1,6 @@
 {
   "name": "Project Versioning System",
-  "description": "Creates project snapshots.",
+  "description": "Creates and restore project versions",
   "type": "app",
   "version": "2.0.0",
   "categories": ["system"],
@@ -19,6 +19,6 @@
   "context_menu": {
     "target": ["images_project"]
   },
-  "icon": "https://www.shutterstock.com/image-vector/geometric-minimal-line-art-letter-600nw-1207791553.jpg",
+  "icon": "https://github.com/supervisely-ecosystem/project-versioning/assets/57998637/094e7ed4-99b2-4f40-9570-608509c0fe6f",
   "icon_cover": true
 }
