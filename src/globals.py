@@ -32,6 +32,6 @@ elif action == "restore":
     version_num = int(os.environ.get("modal.state.targetVersion"))
 
 
-create_meta = {"customNodeSettings": {"title": "<h4>Create Version</h4>"}}
+create_meta = {"customNodeSettings": {"title": "<h4>Create New Version</h4>"}}
 
-restore_meta = {"customNodeSettings": {"title": "<h4>Restore Version</h4>"}}
+restore_meta = {"customNodeSettings": {"title": "<h4>Restore From Version</h4>"}}
