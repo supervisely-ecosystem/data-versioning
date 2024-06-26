@@ -5,34 +5,23 @@
       style="flex-direction: column; margin: 10px 0 10px 0"
     >
       <sly-field title="Select action">
-        <el-checkbox
-          style="margin: 8px 0px 0 8px"
-          v-model="state.create"
-          v-if="!state.restore"
-          >Create</el-checkbox
-        >
-        <el-checkbox
-          style="margin: 8px 0px 0 8px"
-          v-model="state.restore"
-          v-if="!state.create"
-          >Restore</el-checkbox
-        >
+        <el-select v-model="state.actionType">
+          <el-option label="Create" value="create"></el-option>
+          <el-option label="Restore" value="restore"></el-option>
+        </el-select>
       </sly-field>
-      <sly-field title="Title" v-if="state.create">
-        <el-input placeholder="Text" v-model="state.versionTitle"></el-input>
+      <sly-field title="Title" v-if="state.actionType === 'create'">
+        <el-input placeholder="Text" v-model="state.title"></el-input>
       </sly-field>
-      <sly-field title="Description" v-if="state.create">
+      <sly-field title="Description" v-if="state.actionType === 'create'">
         <el-input
           placeholder="Text"
-          v-model="state.versionDescription"
+          v-model="state.description"
           type="textarea"
         ></el-input>
       </sly-field>
-      <sly-field title="Version number" v-if="state.restore">
-        <el-input-number
-          v-model="state.targetVersion"
-          :min="1"
-        ></el-input-number>
+      <sly-field title="Version number" v-if="state.actionType === 'restore'">
+        <el-input-number v-model="state.version" :min="1"></el-input-number>
       </sly-field>
     </div>
   </sly-card>
