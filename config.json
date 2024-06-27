@@ -1,6 +1,6 @@
 {
-  "name": "Project Versioning System",
-  "description": "Creates and restore project versions",
+  "name": "Data Version Control",
+  "description": "Manage data versions with ease, allowing you to create and restore data versions effortlessly.",
   "type": "app",
   "version": "2.0.0",
   "categories": ["system"],
@@ -19,6 +19,6 @@
   "context_menu": {
     "target": ["images_project"]
   },
-  "icon": "https://github.com/supervisely-ecosystem/sys-archiver-media/assets/57998637/c6a4d866-a58d-4e23-bafe-4bf796500f24",
+  "icon": "https://github.com/supervisely-ecosystem/sys-archiver-media/assets/57998637/1fe55ac2-8236-432b-8b7f-27465112f440",
   "icon_cover": true
 }
