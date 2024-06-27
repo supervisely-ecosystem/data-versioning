@@ -1,6 +1,6 @@
 {
-  "name": "Data Version Control",
-  "description": "Manage data versions with ease, allowing you to create and restore data versions effortlessly.",
+  "name": "Data Versioning Assistant",
+  "description": "Easily create versions or restore previous state of your projects data",
   "type": "app",
   "version": "2.0.0",
   "categories": ["system"],
@@ -20,5 +20,6 @@
     "target": ["images_project"]
   },
   "icon": "https://github.com/supervisely-ecosystem/sys-archiver-media/assets/57998637/1fe55ac2-8236-432b-8b7f-27465112f440",
+  "poster": "https://github.com/supervisely-ecosystem/sys-archiver-media/assets/57998637/04b50e52-e8d0-42a7-b125-6c637d122970",
   "icon_cover": true
 }

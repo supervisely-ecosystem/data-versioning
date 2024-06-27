@@ -1,7 +1,7 @@
 <div align='center' markdown> 
-<img src="https://raw.githubusercontent.com/supervisely-ecosystem/project-versioning-media/master/project-versioning-bg.png" /> <br>
+<img src="https://github.com/supervisely-ecosystem/sys-archiver-media/assets/57998637/04b50e52-e8d0-42a7-b125-6c637d122970" /> <br>
 
-# Project Versioning System
+# Data Versioning Assistant
 
 <p align='center'>
   <a href='#overview'>Overview</a>
@@ -17,5 +17,5 @@
 
 ## Overview
 
-Creates project snapshots and allows to restore them.
+Manage data versions with ease, allowing you to create and restore data versions effortlessly.
 
