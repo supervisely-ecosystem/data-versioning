@@ -12,7 +12,8 @@
     "actionType": "create",
     "title": "",
     "description": "",
-    "version": 1
+    "version": 1,
+    "skipMissed": false
   },
   "task_location": "workspace_tasks",
   "headless": true,
