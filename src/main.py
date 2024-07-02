@@ -52,7 +52,11 @@ def main():
                 zmdi_icon="zmdi-time-restore",
             )
     else:
-        new_project_info = g.api.project.version.restore(project_info, version_num=g.version_num)
+        new_project_info = g.api.project.version.restore(
+            project_info,
+            version_num=g.version_num,
+            skip_missed_entities=g.skip_missed,
+        )
         if new_project_info is None:
             g.api.app.set_output_text(
                 g.TASK_ID,
