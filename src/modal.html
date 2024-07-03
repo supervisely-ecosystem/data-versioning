@@ -23,13 +23,6 @@
       <sly-field title="Version number" v-if="state.actionType === 'restore'">
         <el-input-number v-model="state.version" :min="1"></el-input-number>
       </sly-field>
-      <sly-field
-        title="Skip Missed Images"
-        description="Allows you to recreate project even if some images are permanently lost"
-        v-if="state.actionType === 'restore'"
-      >
-        <el-checkbox v-model="state.skipMissed"></el-checkbox>
-      </sly-field>
     </div>
   </sly-card>
 </div>

@@ -18,7 +18,6 @@ else:
     TASK_ID = int(api.task_id)
 
 action = os.environ.get("modal.state.actionType")
-skip_missed = strtobool(os.environ.get("modal.state.skipMissed"))
 if action == "create":
     version_title = str(os.environ.get("modal.state.title"))
     if version_title == "":

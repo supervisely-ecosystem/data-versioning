@@ -7,9 +7,9 @@ import globals as g
 def main():
     project_info = g.api.project.get_info_by_id(g.PROJECT_ID)
     if g.action == "create":
-        g.api.app.add_input_project(project_info, task_id=g.TASK_ID, meta=g.create_meta)
+        g.api.app.workflow.add_input_project(project_info, task_id=g.TASK_ID, meta=g.create_meta)
     else:
-        g.api.app.add_input_project(
+        g.api.app.workflow.add_input_project(
             project_info, task_id=g.TASK_ID, version_num=g.version_num, meta=g.restore_meta
         )
     timer = TinyTimer()
@@ -44,7 +44,7 @@ def main():
         else:
             if version_num is None:
                 version_num = 0
-            g.api.app.add_output_project(project_info, project_version_id)
+            g.api.app.workflow.add_output_project(project_info, project_version_id)
             g.api.app.set_output_text(
                 g.TASK_ID,
                 f'New restore point created for "{project_info.name}"',
@@ -52,11 +52,7 @@ def main():
                 zmdi_icon="zmdi-time-restore",
             )
     else:
-        new_project_info = g.api.project.version.restore(
-            project_info,
-            version_num=g.version_num,
-            skip_missed_entities=g.skip_missed,
-        )
+        new_project_info = g.api.project.version.restore(project_info, version_num=g.version_num)
         if new_project_info is None:
             g.api.app.set_output_text(
                 g.TASK_ID,
@@ -67,7 +63,7 @@ def main():
                 background_color="#FFE8BE",
             )
         else:
-            g.api.app.add_output_project(new_project_info)
+            g.api.app.workflow.add_output_project(new_project_info)
             g.api.app.set_output_project(g.TASK_ID, new_project_info.id, new_project_info.name)
     diff = timer.get_sec()
     sly.logger.debug(f"Project version {g.action} took {diff:.2f} sec")
