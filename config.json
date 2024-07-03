@@ -1,6 +1,6 @@
 {
   "name": "Data Versioning",
-  "description": "Easily create versions or restore previous state of your projects data",
+  "description": "Create project versions or restore previous data state. Available exclusively for Pro and Enterprise subscribers.",
   "type": "app",
   "version": "2.0.0",
   "categories": ["system"],

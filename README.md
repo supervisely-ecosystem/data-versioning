@@ -16,20 +16,16 @@
 
 ## Overview
 
-Easily create versions or restore previous state of your projects data.
+✨ Effortlessly create versions or restore previous states of your image project data. 
+<br>🪙 Available exclusively for **Pro** and <span style="color:#96f">**Enterprise**</span> subscribers.
 
 ## How to Run
 
-The application has two modes: Create and Restore.
+The application works in two modes: **Create** and **Restore**.
 
-### Create Mode
+### **Create Mode**
 
 In Create mode, you can manually specify the **Title** and **Description** of the version, which helps in identifying the state of the project at the time the version was created. <br>Some applications can create versions automatically, using their own **Title** and **Description** that make them easily recognizable.
 
-### Restore Mode
-In Restore mode, you need to specify the **Version** number from which you want to create a new project. The state of this new project will match that version. <br>An additional parameter, **Skip Missed Images**, allows you to create a new project even if some images are permanently lost (e.g., they were deleted or are inaccessible in remote storage).
-
-### Pro Tips
-**Local Images:** If you still have the images locally that were previously on the server, you can upload them to a new empty project. This allows you to fully recreate the **Version** as you will reestablish the connection to these images via their hashes.
-
-**Links:** Handling links is more challenging because you'll need to manually update them to new links within the backup objects. In this case, you can use the SDK to assist with these tasks.
+### **Restore Mode**
+In Restore mode, you need to specify the **Version** number from which you want to create a new project. The state of this new project will match that version.
