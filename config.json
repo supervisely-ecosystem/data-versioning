@@ -16,7 +16,6 @@
   },
   "task_location": "workspace_tasks",
   "headless": true,
-  "isolate": true,
   "system": true,
   "icon": "https://github.com/supervisely-ecosystem/sys-archiver-media/assets/57998637/1fe55ac2-8236-432b-8b7f-27465112f440",
   "poster": "https://github.com/supervisely-ecosystem/sys-archiver-media/assets/57998637/c752afbd-8efe-4b92-b749-0569988b8695",
