@@ -1,5 +1,5 @@
 <div align='center' markdown> 
-<img src="https://github.com/supervisely-ecosystem/sys-archiver-media/assets/57998637/aab35196-4c53-40d8-b53d-15969ff6f169" /> <br>
+<img src="https://github.com/supervisely-ecosystem/data-versioning/assets/57998637/acad95dc-abb3-4407-bbaf-2db0734ba126" /> <br>
 
 <p align='center'>
   <a href='#overview'>Overview</a> •
