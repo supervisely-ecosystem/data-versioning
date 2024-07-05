@@ -21,7 +21,7 @@
 
 ## How to Run
 
-The application works in two modes: **Create** and **Restore**.
+The application works in two modes: **Create** and **Restore**. Depending on the selected action, the application is launched within the project under the Versions tab.
 
 ### **Create Mode**
 
