@@ -39,7 +39,7 @@ class Workflow:
                 f"Supervisely instance version {self.api.instance_version} does not support workflow and versioning features."
             )
             if not sly.is_community():
-                sly.logger.warning(
+                sly.logger.info(
                     f"To use them, please update your instance to version {self._min_instance_version} or higher."
                 )
             return False
