@@ -14,6 +14,7 @@ api: sly.Api = sly.Api.from_env()
 
 if sly.is_development():
     TASK_ID = int(os.getenv("TASK_ID"))
+    api.app.workflow.enable()
 else:
     TASK_ID = int(api.task_id)
 
