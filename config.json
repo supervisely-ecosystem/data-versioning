@@ -1,28 +1,28 @@
 {
-  "name": "Data Versioning",
-  "description": "Create project versions or restore previous data state. Available exclusively for Pro and Enterprise subscribers.",
-  "type": "app",
-  "version": "2.0.0",
-  "categories": ["system"],
-  "docker_image": "supervisely/data-versioning:6.73.213",
-  "min_instance_version": "6.11.19",
-  "main_script": "src/main.py",
-  "modal_template": "src/modal.html",
-  "modal_template_state": {
-    "actionType": "create",
-    "title": "",
-    "description": "",
-    "version": 1
-  },
-  "access_restriction": [
-    {
-      "instance": "community_free"
-    }
-  ],
-  "task_location": "workspace_tasks",
-  "headless": true,
-  "system": true,
-  "icon": "https://github.com/supervisely-ecosystem/data-versioning/assets/57998637/8a1448cf-733d-4113-9a2c-1a9008e053b5",
-  "poster": "https://github.com/supervisely-ecosystem/data-versioning/assets/57998637/afeaf0eb-94e0-4d32-a103-113a66b674a1",
-  "icon_cover": true
+	"name": "Data Versioning",
+	"description": "Create project versions or restore previous data state. Available exclusively for Pro and Enterprise subscribers.",
+	"type": "app",
+	"version": "2.0.0",
+	"categories": ["system"],
+	"docker_image": "supervisely/data-versioning:6.73.308",
+	"min_instance_version": "6.12.28",
+	"main_script": "src/main.py",
+	"modal_template": "src/modal.html",
+	"modal_template_state": {
+		"actionType": "create",
+		"title": "",
+		"description": "",
+		"version": 1
+	},
+	"access_restriction": [
+		{
+			"instance": "community_free"
+		}
+	],
+	"task_location": "workspace_tasks",
+	"headless": true,
+	"system": true,
+	"icon": "https://github.com/supervisely-ecosystem/data-versioning/assets/57998637/8a1448cf-733d-4113-9a2c-1a9008e053b5",
+	"poster": "https://github.com/supervisely-ecosystem/data-versioning/assets/57998637/afeaf0eb-94e0-4d32-a103-113a66b674a1",
+	"icon_cover": true
 }
