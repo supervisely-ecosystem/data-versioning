@@ -1,4 +1,5 @@
 import supervisely as sly
+from supervisely import logger
 from supervisely.tiny_timer import TinyTimer
 
 import globals as g
@@ -19,6 +20,8 @@ def main():
     else:
         version_id, version_num = None, None
     if g.action == "create":
+        logger.info(f"Create new version for project: {project_info.name}")
+        logger.info(f"Title: {g.version_title}, Description: {g.version_description}")
         project_version_id = g.api.project.version.create(
             project_info, g.version_title, g.version_description
         )
@@ -54,6 +57,7 @@ def main():
                 zmdi_icon="zmdi-time-restore",
             )
     else:
+        logger.info(f"Restore project: {project_info.name} from version: {g.version_num}")
         new_project_info = g.api.project.version.restore(project_info, version_num=g.version_num)
         if new_project_info is None:
             g.api.app.set_output_text(
