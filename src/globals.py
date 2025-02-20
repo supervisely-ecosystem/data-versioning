@@ -3,6 +3,7 @@ from distutils.util import strtobool
 
 import supervisely as sly
 from dotenv import load_dotenv
+from supervisely import logger
 
 if sly.is_development():
     load_dotenv("local.env")
@@ -21,6 +22,7 @@ else:
 action = os.environ.get("modal.state.actionType")
 if action == "create":
     version_title = str(os.environ.get("modal.state.title"))
+    logger.info(f"Obtained from modal window: version_title  - '{version_title}'")
     if version_title == "":
         version_title = None
     version_description = str(os.environ.get("modal.state.description"))
