@@ -25,7 +25,7 @@ The application works in two modes: **Create** and **Restore**. Depending on the
 
 ### **Create Mode**
 
-In Create mode, you can manually specify the **Title** and **Description** of the version, which helps in identifying the state of the project at the time the version was created. <br>Some applications can create versions automatically, using their own **Title** and **Description** that make them easily recognizable.
+In Create mode, you can manually specify the **Name** and **Description** of the version, which helps in identifying the state of the project at the time the version was created. <br>Some applications can create versions automatically, using their own **Name** and **Description** that make them easily recognizable.
 
 ### **Restore Mode**
 In Restore mode, you need to specify the **Version** number from which you want to create a new project. The state of this new project will match that version.
