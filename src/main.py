@@ -21,9 +21,9 @@ def main():
         version_id, version_num = None, None
     if g.action == "create":
         logger.info(f"Create new version for project: {project_info.name}")
-        logger.info(f"Title: {g.version_title}, Description: {g.version_description}")
+        logger.info(f"Title: {g.version_name}, Description: {g.version_description}")
         project_version_id = g.api.project.version.create(
-            project_info, g.version_title, g.version_description
+            project_info, g.version_name, g.version_description
         )
         if project_version_id is None:
             g.api.app.set_output_text(

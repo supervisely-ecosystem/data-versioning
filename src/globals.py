@@ -20,16 +20,16 @@ else:
 
 action = os.environ.get("modal.state.actionType")
 if action == "create":
-    version_title = str(os.environ.get("modal.state.versionName"))
-    logger.info(f"Obtained from modal window: version_title  - '{version_title}'")
-    if version_title == "":
-        version_title = None
+    version_name = str(os.environ.get("modal.state.versionName"))
+    if version_name == "":
+        version_name = None
     version_description = str(os.environ.get("modal.state.description"))
     if version_description == "":
         version_description = None
     version_num = None
+    logger.info(f"Version Name  - '{version_name}', Version Description - '{version_description}'")
 elif action == "restore":
-    version_title = None
+    version_name = None
     version_description = None
     version_num = int(os.environ.get("modal.state.version"))
 
