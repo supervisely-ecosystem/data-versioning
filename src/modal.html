@@ -10,8 +10,8 @@
           <el-option label="Restore" value="restore"></el-option>
         </el-select>
       </sly-field>
-      <sly-field title="Title" v-if="state.actionType === 'create'">
-        <el-input placeholder="Text" v-model="state.title"></el-input>
+      <sly-field title="Name" v-if="state.actionType === 'create'">
+        <el-input placeholder="Text" v-model="state.versionName"></el-input>
       </sly-field>
       <sly-field title="Description" v-if="state.actionType === 'create'">
         <el-input

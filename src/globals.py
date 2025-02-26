@@ -1,8 +1,8 @@
 import os
-from distutils.util import strtobool
 
 import supervisely as sly
 from dotenv import load_dotenv
+from supervisely import logger
 
 if sly.is_development():
     load_dotenv("local.env")
@@ -20,15 +20,15 @@ else:
 
 action = os.environ.get("modal.state.actionType")
 if action == "create":
-    version_title = str(os.environ.get("modal.state.title"))
-    if version_title == "":
-        version_title = None
+    version_name = str(os.environ.get("modal.state.versionName"))
+    if version_name == "":
+        version_name = None
     version_description = str(os.environ.get("modal.state.description"))
     if version_description == "":
         version_description = None
     version_num = None
 elif action == "restore":
-    version_title = None
+    version_name = None
     version_description = None
     version_num = int(os.environ.get("modal.state.version"))
 

@@ -4,13 +4,13 @@
 	"type": "app",
 	"version": "2.0.0",
 	"categories": ["system"],
-	"docker_image": "supervisely/data-versioning:6.73.309",
-	"min_instance_version": "6.12.28",
+	"docker_image": "supervisely/data-versioning:6.73.315",
+	"min_instance_version": "6.12.30",
 	"main_script": "src/main.py",
 	"modal_template": "src/modal.html",
 	"modal_template_state": {
 		"actionType": "create",
-		"title": "",
+		"versionName": "",
 		"description": "",
 		"version": 1
 	},
