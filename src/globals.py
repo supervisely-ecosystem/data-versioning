@@ -20,7 +20,7 @@ else:
 
 action = os.environ.get("modal.state.actionType")
 if action == "create":
-    version_title = str(os.environ.get("modal.state.title"))
+    version_title = str(os.environ.get("modal.state.versionName"))
     logger.info(f"Obtained from modal window: version_title  - '{version_title}'")
     if version_title == "":
         version_title = None
