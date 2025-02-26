@@ -27,7 +27,6 @@ if action == "create":
     if version_description == "":
         version_description = None
     version_num = None
-    logger.info(f"Version Name  - '{version_name}', Version Description - '{version_description}'")
 elif action == "restore":
     version_name = None
     version_description = None
