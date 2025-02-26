@@ -72,7 +72,7 @@ def main():
             g.api.app.workflow.add_output_project(new_project_info, task_id=g.TASK_ID)
             g.api.app.set_output_project(g.TASK_ID, new_project_info.id, new_project_info.name)
     diff = timer.get_sec()
-    sly.logger.debug(f"Project version {g.action} took {diff:.2f} sec")
+    logger.debug(f"Project version {g.action} took {diff:.2f} sec")
 
 
 if __name__ == "__main__":
