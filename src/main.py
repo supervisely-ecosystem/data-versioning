@@ -1,23 +1,12 @@
 import supervisely as sly
 from supervisely import logger
 from supervisely.tiny_timer import TinyTimer
-from supervisely.api.project_api import ProjectType
-from supervisely.project.video_data_version import VideoDataVersion
+
 import globals as g
 
 
 def main():
     project_info = g.api.project.get_info_by_id(g.PROJECT_ID)
-
-    if project_info.type == ProjectType.IMAGES.value:
-        versioning = g.api.project.version
-    elif project_info.type == ProjectType.VIDEOS.value:
-        versioning = VideoDataVersion(g.api)
-    # elif project_info.type == ProjectType.VOLUMES.value:
-        # versioning = VolumeDataVersion(g.api)
-    else:
-        raise ValueError(f"Unsupported project type: {project_info.type}")
-
     if g.action == "create":
         g.api.app.workflow.add_input_project(project_info, task_id=g.TASK_ID, meta=g.create_meta)
     else:
@@ -33,7 +22,9 @@ def main():
     if g.action == "create":
         logger.info(f"Create new version for project: {project_info.name}")
         logger.info(f"Name: {g.version_name}, Description: {g.version_description}")
-        project_version_id = versioning.create(project_info, g.version_name, g.version_description)
+        project_version_id = g.api.project.version.create(
+            project_info, g.version_name, g.version_description
+        )
         if project_version_id is None:
             g.api.app.set_output_text(
                 g.TASK_ID,
@@ -67,7 +58,7 @@ def main():
             )
     else:
         logger.info(f"Restore project: {project_info.name} from version: {g.version_num}")
-        new_project_info = versioning.restore(project_info, version_num=g.version_num)
+        new_project_info = g.api.project.version.restore(project_info, version_num=g.version_num)
         if new_project_info is None:
             g.api.app.set_output_text(
                 g.TASK_ID,
