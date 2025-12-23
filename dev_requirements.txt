@@ -1,1 +1,2 @@
-supervisely==6.73.315
+supervisely==6.73.493
+supervisely[versioning]==6.73.493
