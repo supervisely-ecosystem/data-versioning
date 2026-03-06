@@ -23,7 +23,7 @@ def main():
         logger.info(f"Create new version for project: {project_info.name}")
         logger.info(f"Name: {g.version_name}, Description: {g.version_description}")
         project_version_id = g.api.project.version.create(
-            project_info, g.version_name, g.version_description
+            project_info, g.version_name, g.version_description, g.instant_access
         )
         if project_version_id is None:
             g.api.app.set_output_text(
@@ -58,7 +58,9 @@ def main():
             )
     else:
         logger.info(f"Restore project: {project_info.name} from version: {g.version_num}")
-        new_project_info = g.api.project.version.restore(project_info, version_num=g.version_num)
+        new_project_info = g.api.project.version.restore(
+            project_info, version_num=g.version_num, instant_access=g.instant_access
+        )
         if new_project_info is None:
             g.api.app.set_output_text(
                 g.TASK_ID,

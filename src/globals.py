@@ -19,6 +19,11 @@ else:
     TASK_ID = int(api.task_id)
 
 action = os.environ.get("modal.state.actionType")
+instant_access = os.environ.get("modal.state.instantAccess", "false").strip().lower() in (
+    "true",
+    "1",
+    "yes",
+)
 if action == "create":
     version_name = str(os.environ.get("modal.state.versionName"))
     if version_name == "":

@@ -1,6 +1,6 @@
-FROM supervisely/base-py-sdk:6.73.531
+FROM supervisely/base-py-sdk:6.73.540
 
-ARG version=6.73.531
+ARG version=6.73.540
 
 # Supervisely
 RUN pip install --upgrade pip

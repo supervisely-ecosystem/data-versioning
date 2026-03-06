@@ -23,6 +23,20 @@
       <sly-field title="Version number" v-if="state.actionType === 'restore'">
         <el-input-number v-model="state.version" :min="1"></el-input-number>
       </sly-field>
+      <sly-field title="Instant Acces" v-if="state.actionType">
+        <div style="font-size: 12px; color: #6b7280">
+          <span v-if="state.actionType === 'create'"
+            >Create an additional Instant Access version.</span
+          >
+          <span v-else-if="state.actionType === 'restore'"
+            >Restore from the Instant Access version.</span
+          >
+          <span v-else></span>
+        </div>
+        <el-checkbox v-model="state.instantAccess" style="margin-top: 6px"
+          >Enable</el-checkbox
+        >
+      </sly-field>
     </div>
   </sly-card>
 </div>
