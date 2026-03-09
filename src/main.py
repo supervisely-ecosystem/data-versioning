@@ -7,7 +7,7 @@ import globals as g
 
 def main():
     project_info = g.api.project.get_info_by_id(g.PROJECT_ID)
-    if g.action == "create":
+    if g.action == g.ActionType.CREATE:
         g.api.app.workflow.add_input_project(project_info, task_id=g.TASK_ID, meta=g.create_meta)
     else:
         g.api.app.workflow.add_input_project(
@@ -19,7 +19,7 @@ def main():
         version_num = project_info.version.get("version")
     else:
         version_id, version_num = None, None
-    if g.action == "create":
+    if g.action == g.ActionType.CREATE:
         logger.info(f"Create new version for project: {project_info.name}")
         logger.info(f"Name: {g.version_name}, Description: {g.version_description}")
         project_version_id = g.api.project.version.create(
@@ -56,7 +56,7 @@ def main():
                 description=f"Project ID: {project_info.id}, Version: {version_num + 1}",
                 zmdi_icon="zmdi-time-restore",
             )
-    else:
+    elif g.action == g.ActionType.RESTORE:
         logger.info(f"Restore project: {project_info.name} from version: {g.version_num}")
         new_project_info = g.api.project.version.restore(
             project_info, version_num=g.version_num, instant_access=g.instant_access
@@ -73,6 +73,10 @@ def main():
         else:
             g.api.app.workflow.add_output_project(new_project_info, task_id=g.TASK_ID)
             g.api.app.set_output_project(g.TASK_ID, new_project_info.id, new_project_info.name)
+    elif g.action == g.ActionType.ENABLE_PREVIEW:
+        logger.info(f"Enable instant access of version {g.version_num} for project {project_info.name}")
+        version_id = g.api.project.version.get_id_by_number(project_id=project_info.id, version_num=g.version_num)
+        new_project_info = g.api.project.version.enable_preview(project_id=project_info.id, version_id=version_id)
     diff = timer.get_sec()
     logger.debug(f"Project version {g.action} took {diff:.2f} sec")
 

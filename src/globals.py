@@ -8,6 +8,10 @@ if sly.is_development():
     load_dotenv("local.env")
     load_dotenv(os.path.expanduser("~/supervisely.env"))
 
+class ActionType:
+    CREATE = "create"
+    RESTORE = "restore"
+    ENABLE_PREVIEW = "enable_preview"
 
 PROJECT_ID = int(os.getenv("PROJECT_ID"))
 api: sly.Api = sly.Api.from_env()
@@ -24,7 +28,7 @@ instant_access = os.environ.get("modal.state.instantAccess", "false").strip().lo
     "1",
     "yes",
 )
-if action == "create":
+if action == ActionType.CREATE:
     version_name = str(os.environ.get("modal.state.versionName"))
     if version_name == "":
         version_name = None
@@ -32,7 +36,7 @@ if action == "create":
     if version_description == "":
         version_description = None
     version_num = None
-elif action == "restore":
+elif action in (ActionType.RESTORE, ActionType.ENABLE_PREVIEW):
     version_name = None
     version_description = None
     version_num = int(os.environ.get("modal.state.version"))
