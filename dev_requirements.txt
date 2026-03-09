@@ -1,1 +1,2 @@
 supervisely[versioning]==6.73.540
+# supervisely[versioning] @ git+https://github.com/supervisely/supervisely.git@instant-access-project-versions
