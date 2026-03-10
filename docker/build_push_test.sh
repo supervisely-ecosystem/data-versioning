@@ -1,2 +1,2 @@
-docker build -t supervisely/data-versioning:test . && \
+docker build --no-cache -t supervisely/data-versioning:test . && \
 docker push supervisely/data-versioning:test

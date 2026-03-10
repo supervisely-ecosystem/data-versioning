@@ -1,9 +1,10 @@
-FROM supervisely/base-py-sdk:6.73.540
+FROM supervisely/base-py-sdk-light:6.73.540
 
 ARG version=6.73.540
 
 # Supervisely
-RUN pip install --upgrade pip && \
+RUN apt-get update && apt-get install -y --no-install-recommends git && \
+    pip install --upgrade pip && \
     pip install --upgrade --no-cache "supervisely[versioning] @ git+https://github.com/supervisely/supervisely.git@instant-access-project-versions"
 
 
