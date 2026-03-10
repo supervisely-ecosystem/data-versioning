@@ -73,7 +73,7 @@ def main():
             g.api.app.set_output_project(g.TASK_ID, new_project_info.id, new_project_info.name)
     elif g.action == g.ActionType.ENABLE_PREVIEW:
         logger.info(
-            f"Enable instant access of version {g.version_num} for project {project_info.name}"
+            f"Enable Enable Preview of version {g.version_num} for project {project_info.name}"
         )
         version_id = g.api.project.version.get_id_by_number(
             project_id=project_info.id, version_num=g.version_num
