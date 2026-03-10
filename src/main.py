@@ -22,8 +22,9 @@ def main():
     if g.action == g.ActionType.CREATE:
         logger.info(f"Create new version for project: {project_info.name}")
         logger.info(f"Name: {g.version_name}, Description: {g.version_description}")
+        logger.info(f"Enable preview: {g.enable_preview}")
         project_version_id = g.api.project.version.create(
-            project_info, g.version_name, g.version_description, g.enable_preview
+            project_info=project_info, version_title=g.version_name, version_description=g.version_description, enable_preview=g.enable_preview,
         )
         if project_version_id is None:
             g.api.app.set_output_text(
