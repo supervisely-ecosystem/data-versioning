@@ -8,6 +8,16 @@
         <el-select v-model="state.actionType">
           <el-option label="Create" value="create"></el-option>
           <el-option label="Restore" value="restore"></el-option>
+          <el-option
+            label="Enable Preview"
+            value="enable_preview"
+            :disabled="true"
+          ></el-option>
+          <el-option
+            label="Restore Preview"
+            value="restore_preview"
+            :disabled="true"
+          ></el-option>
         </el-select>
       </sly-field>
       <sly-field title="Name" v-if="state.actionType === 'create'">

@@ -13,6 +13,7 @@ class ActionType:
     CREATE = "create"
     RESTORE = "restore"
     ENABLE_PREVIEW = "enable_preview"
+    RESTORE_PREVIEW = "restore_preview"
 
 
 PROJECT_ID = int(os.getenv("PROJECT_ID"))
@@ -38,7 +39,7 @@ if action == ActionType.CREATE:
     if version_description == "":
         version_description = None
     version_num = None
-elif action in (ActionType.RESTORE, ActionType.ENABLE_PREVIEW):
+elif action in (ActionType.RESTORE, ActionType.ENABLE_PREVIEW, ActionType.RESTORE_PREVIEW):
     version_name = None
     version_description = None
     version_num = int(os.environ.get("modal.state.version"))
