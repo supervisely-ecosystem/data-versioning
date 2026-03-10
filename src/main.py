@@ -1,5 +1,6 @@
 import supervisely as sly
 from supervisely import logger
+from supervisely.api.app_api import WorkflowMeta, WorkflowSettings
 from supervisely.tiny_timer import TinyTimer
 
 import globals as g
@@ -51,8 +52,26 @@ def main():
         else:
             if version_num is None:
                 version_num = 0
+
+            meta = None
+            if g.enable_preview:
+                preview_project_info = g.api.project.version.get_info_by_id(
+                    project_info.id, version_id=project_version_id
+                )
+                if preview_project_info.preview_project_id is not None:
+                    meta = WorkflowMeta(
+                        node_settings=WorkflowSettings(
+                            url=g.api.server_address
+                            + f"/projects/{preview_project_info.preview_project_id}/datasets",
+                            url_title="Open",
+                            description="With Enabled Preview",
+                        )
+                    )
             g.api.app.workflow.add_output_project(
-                project_info, project_version_id, task_id=g.TASK_ID
+                project_info,
+                project_version_id,
+                task_id=g.TASK_ID,
+                meta=meta,
             )
             g.api.app.set_output_text(
                 g.TASK_ID,
@@ -84,6 +103,18 @@ def main():
             project=project_info, version_id=version_id
         )
         logger.info(f"Preview enabled successfully. Preview project ID: {new_project_info.id}")
+        g.api.app.workflow.add_output_project(
+            project=project_info,
+            version_id=version_id,
+            task_id=g.TASK_ID,
+            meta=WorkflowMeta(
+                node_settings=WorkflowSettings(
+                    title=f"Enable Version Preview",
+                    url=g.api.server_address + f"/projects/{new_project_info.id}/datasets",
+                    url_title="Open",
+                )
+            ),
+        )
         g.api.app.set_output_text(
             g.TASK_ID,
             f"Preview enabled for version number {g.version_num}",
