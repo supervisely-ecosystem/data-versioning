@@ -23,7 +23,7 @@ def main():
         logger.info(f"Create new version for project: {project_info.name}")
         logger.info(f"Name: {g.version_name}, Description: {g.version_description}")
         project_version_id = g.api.project.version.create(
-            project_info, g.version_name, g.version_description, g.instant_access
+            project_info, g.version_name, g.version_description, g.enable_preview
         )
         if project_version_id is None:
             g.api.app.set_output_text(
@@ -58,9 +58,7 @@ def main():
             )
     elif g.action == g.ActionType.RESTORE:
         logger.info(f"Restore project: {project_info.name} from version: {g.version_num}")
-        new_project_info = g.api.project.version.restore(
-            project_info, version_num=g.version_num, instant_access=g.instant_access
-        )
+        new_project_info = g.api.project.version.restore(project_info, version_num=g.version_num)
         if new_project_info is None:
             g.api.app.set_output_text(
                 g.TASK_ID,
@@ -74,9 +72,15 @@ def main():
             g.api.app.workflow.add_output_project(new_project_info, task_id=g.TASK_ID)
             g.api.app.set_output_project(g.TASK_ID, new_project_info.id, new_project_info.name)
     elif g.action == g.ActionType.ENABLE_PREVIEW:
-        logger.info(f"Enable instant access of version {g.version_num} for project {project_info.name}")
-        version_id = g.api.project.version.get_id_by_number(project_id=project_info.id, version_num=g.version_num)
-        new_project_info = g.api.project.version.enable_preview(project_id=project_info.id, version_id=version_id)
+        logger.info(
+            f"Enable instant access of version {g.version_num} for project {project_info.name}"
+        )
+        version_id = g.api.project.version.get_id_by_number(
+            project_id=project_info.id, version_num=g.version_num
+        )
+        new_project_info = g.api.project.version.enable_preview(
+            project_id=project_info.id, version_id=version_id
+        )
     diff = timer.get_sec()
     logger.debug(f"Project version {g.action} took {diff:.2f} sec")
 

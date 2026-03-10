@@ -13,7 +13,7 @@
     "versionName": "",
     "description": "",
     "version": 1,
-    "instantAccess": false
+    "enablePreview": false
   },
   "access_restriction": [
     {
