@@ -119,6 +119,9 @@ def main():
             zmdi_icon="zmdi-eye",
         )
     elif g.action == g.ActionType.RESTORE_PREVIEW:
+        g.version_num = g.api.project.version.get_info_by_id(
+            project_info.id, version_id=g.version_id
+        ).version
         logger.info(f"Restoring version {g.version_num} preview")
         new_project_info = g.api.project.version.enable_preview(
             project=project_info, version_id=g.version_id, overwrite=True
