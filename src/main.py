@@ -81,7 +81,7 @@ def main():
             )
     elif g.action == g.ActionType.RESTORE:
         logger.info(f"Restore project: {project_info.name} from version: {g.version_num}")
-        new_project_info = g.api.project.version.restore(project_info, version_num=g.version_num)
+        new_project_info = g.api.project.version.restore(project_info, version_id=g.version_id)
         if new_project_info is None:
             g.api.app.set_output_text(
                 g.TASK_ID,
@@ -96,16 +96,13 @@ def main():
             g.api.app.set_output_project(g.TASK_ID, new_project_info.id, new_project_info.name)
     elif g.action == g.ActionType.ENABLE_PREVIEW:
         logger.info(f"Enabling preview of version {g.version_num} for project {project_info.name}")
-        version_id = g.api.project.version.get_id_by_number(
-            project_id=project_info.id, version_num=g.version_num
-        )
         new_project_info = g.api.project.version.enable_preview(
-            project=project_info, version_id=version_id
+            project=project_info, version_id=g.version_id
         )
         logger.info(f"Preview enabled successfully. Preview project ID: {new_project_info.id}")
         g.api.app.workflow.add_output_project(
             project=project_info,
-            version_id=version_id,
+            version_id=g.version_id,
             task_id=g.TASK_ID,
             meta=WorkflowMeta(
                 node_settings=WorkflowSettings(
@@ -118,21 +115,18 @@ def main():
         g.api.app.set_output_text(
             g.TASK_ID,
             f"Preview enabled for version number {g.version_num}",
-            description=f"Project ID: {project_info.id}, Version ID: {version_id}",
+            description=f"Project ID: {project_info.id}, Version ID: {g.version_id}",
             zmdi_icon="zmdi-eye",
         )
     elif g.action == g.ActionType.RESTORE_PREVIEW:
         logger.info(f"Restoring version {g.version_num} preview")
-        version_id = g.api.project.version.get_id_by_number(
-            project_id=project_info.id, version_num=g.version_num
-        )
         new_project_info = g.api.project.version.enable_preview(
-            project=project_info, version_id=version_id, overwrite=True
+            project=project_info, version_id=g.version_id, overwrite=True
         )
         logger.info(f"Preview restored successfully. Preview project ID: {new_project_info.id}")
         g.api.app.workflow.add_output_project(
             project=project_info,
-            version_id=version_id,
+            version_id=g.version_id,
             task_id=g.TASK_ID,
             meta=WorkflowMeta(
                 node_settings=WorkflowSettings(
@@ -145,7 +139,7 @@ def main():
         g.api.app.set_output_text(
             g.TASK_ID,
             f"Preview restored for version number {g.version_num}",
-            description=f"Project ID: {project_info.id}, Version ID: {version_id}",
+            description=f"Project ID: {project_info.id}, Version ID: {g.version_id}",
             zmdi_icon="zmdi-eye",
         )
     diff = timer.get_sec()

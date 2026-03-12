@@ -31,6 +31,10 @@ enable_preview = os.environ.get("modal.state.enablePreview", "false").strip().lo
     "1",
     "yes",
 )
+version_name = None
+version_description = None
+version_id = None
+version_num = None
 if action == ActionType.CREATE:
     version_name = str(os.environ.get("modal.state.versionName"))
     if version_name == "":
@@ -38,12 +42,9 @@ if action == ActionType.CREATE:
     version_description = str(os.environ.get("modal.state.description"))
     if version_description == "":
         version_description = None
-    version_num = None
 elif action in (ActionType.RESTORE, ActionType.ENABLE_PREVIEW, ActionType.RESTORE_PREVIEW):
-    version_name = None
-    version_description = None
     version_num = int(os.environ.get("modal.state.version"))
-
+    version_id = int(os.environ.get("modal.state.versionId"))
 
 create_meta = {"customNodeSettings": {"title": "<h4>Create New Version</h4>"}}
 
