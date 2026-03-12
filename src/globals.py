@@ -47,7 +47,7 @@ elif action in (ActionType.RESTORE, ActionType.ENABLE_PREVIEW):
     version_num = int(os.environ.get("modal.state.version"))
     version_id = int(os.environ.get("modal.state.versionId"))
 elif action == ActionType.RESTORE_PREVIEW:
-    PROJECT_ID = int(os.environ.get("sourceProjectId"))
+    PROJECT_ID = int(os.environ.get("modal.state.sourceProjectId"))
     version_id = int(os.environ.get("modal.state.versionId"))
 
 create_meta = {"customNodeSettings": {"title": "<h4>Create New Version</h4>"}}
