@@ -119,9 +119,13 @@ def main():
             zmdi_icon="zmdi-eye",
         )
     elif g.action == g.ActionType.RESTORE_PREVIEW:
-        g.version_num = g.api.project.version.get_info_by_id(
+        version_info = g.api.project.version.get_info_by_id(
             project_info.id, version_id=g.version_id
-        ).version
+        )
+        project_to_del_info = g.api.project.edit_info(
+            id=int(version_info.preview_project_id), name=project_info.name + "_delete_later"
+        )
+        g.version_num = version_info.version
         logger.info(f"Restoring version {g.version_num} preview")
         new_project_info = g.api.project.version.enable_preview(
             project=project_info, version_id=g.version_id, overwrite=True
@@ -145,6 +149,7 @@ def main():
             description=f"Project ID: {project_info.id}, Version ID: {g.version_id}",
             zmdi_icon="zmdi-eye",
         )
+        g.api.project.remove_permanently(project_to_del_info.id)
     diff = timer.get_sec()
     logger.debug(f"Project version {g.action} took {diff:.2f} sec")
 
