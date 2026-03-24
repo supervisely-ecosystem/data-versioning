@@ -8,20 +8,59 @@
         <el-select v-model="state.actionType">
           <el-option label="Create" value="create"></el-option>
           <el-option label="Restore" value="restore"></el-option>
+          <el-option
+            label="Enable Preview"
+            value="enable_preview"
+            :disabled="true"
+          ></el-option>
+          <el-option
+            label="Restore Preview"
+            value="restore_preview"
+            :disabled="true"
+          ></el-option>
         </el-select>
       </sly-field>
       <sly-field title="Name" v-if="state.actionType === 'create'">
-        <el-input placeholder="Text" v-model="state.versionName"></el-input>
+        <el-input
+          placeholder="At least 3 characters"
+          v-model="state.versionName"
+          :minlength="3"
+          :maxlength="50"
+          show-word-limit
+        ></el-input>
+        <div
+          v-if="state.versionName && state.versionName.length < 3"
+          style="font-size: 12px; color: #f56c6c; margin-top: 4px"
+        >
+          Minimum 3 characters required
+        </div>
       </sly-field>
       <sly-field title="Description" v-if="state.actionType === 'create'">
         <el-input
-          placeholder="Text"
+          placeholder="At least 10 characters"
           v-model="state.description"
           type="textarea"
+          :minlength="10"
+          :maxlength="500"
+          show-word-limit
         ></el-input>
+        <div
+          v-if="state.description && state.description.length < 10"
+          style="font-size: 12px; color: #f56c6c; margin-top: 4px"
+        >
+          Minimum 10 characters required
+        </div>
       </sly-field>
       <sly-field title="Version number" v-if="state.actionType === 'restore'">
         <el-input-number v-model="state.version" :min="1"></el-input-number>
+      </sly-field>
+      <sly-field title="Preview" v-if="state.actionType === 'create'">
+        <div style="font-size: 12px; color: #6b7280">
+          <span>Make this version available for preview.</span>
+        </div>
+        <el-checkbox v-model="state.enablePreview" style="margin-top: 6px"
+          >Enable</el-checkbox
+        >
       </sly-field>
     </div>
   </sly-card>

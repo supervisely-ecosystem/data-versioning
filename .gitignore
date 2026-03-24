@@ -5,3 +5,4 @@ src/debug
 __pycache__
 download
 supervisely
+.python-version

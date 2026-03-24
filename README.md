@@ -27,6 +27,12 @@ The application works in two modes: **Create** and **Restore**. Depending on the
 
 In Create mode, you can manually specify the **Name** and **Description** of the version, which helps in identifying the state of the project at the time the version was created. <br>Some applications can create versions automatically, using their own **Name** and **Description** that make them easily recognizable.
 
+#### **Enable Preview**
+
+`Available for image and video project types only`
+
+When creating a version, you can enable the **Version Preview** option. A Preview is a read-only version with quick access that uses the project panel interface — it allows you to inspect the project's state at the time the version was created. From the preview, you can also open the labeling tool to view annotations for each image or video. All editing is disabled in preview mode — all controls are inactive, and no entities can be modified.
+
 ### **Restore Mode**
 
 In Restore mode, you need to specify the **Version** number from which you want to create a new project. The state of this new project will match that version.
