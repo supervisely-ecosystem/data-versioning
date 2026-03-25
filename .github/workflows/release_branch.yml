@@ -5,9 +5,11 @@ on:
     branches-ignore:
       - main
       - master
+env:
+  BUILD_TEST_IMAGE_ON_RELEASE: "true"
 jobs:
   Supervisely-Release:
-    uses: supervisely-ecosystem/workflows/.github/workflows/common.yml@master
+    uses: supervisely-ecosystem/workflows/.github/workflows/release_branch.yml@build-test-image
     secrets:
       SUPERVISELY_DEV_API_TOKEN: "${{ secrets.SUPERVISELY_DEV_API_TOKEN }}"
       SUPERVISELY_PRIVATE_DEV_API_TOKEN: "${{ secrets.SUPERVISELY_PRIVATE_DEV_API_TOKEN }}"
