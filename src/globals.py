@@ -1,7 +1,8 @@
 import os
 
-import supervisely as sly
 from dotenv import load_dotenv
+
+import supervisely as sly
 from supervisely import logger
 
 if sly.is_development():
@@ -51,5 +52,4 @@ elif action == ActionType.RESTORE_PREVIEW:
     version_id = int(os.environ.get("modal.state.versionId"))
 
 create_meta = {"customNodeSettings": {"title": "<h4>Create New Version</h4>"}}
-
 restore_meta = {"customNodeSettings": {"title": "<h4>Restore From Version</h4>"}}
