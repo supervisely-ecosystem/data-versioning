@@ -60,6 +60,7 @@ jobs:
     with:
       tag_version: "test"
       skip_tag_check: true
+      workflows_ref: "build-test-image"
 
   Supervisely-Release-Branch:
     needs:
