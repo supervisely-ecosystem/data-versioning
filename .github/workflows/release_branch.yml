@@ -60,7 +60,7 @@ jobs:
     with:
       tag_version: "test"
       skip_tag_check: true
-      workflows_ref: "build-test-image"
+      workflows_ref: "build-test-image" # TODO: remove
 
   Supervisely-Release-Branch:
     needs:
