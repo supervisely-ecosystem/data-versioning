@@ -122,8 +122,19 @@ def main():
         version_info = g.api.project.version.get_info_by_id(
             project_info.id, version_id=g.version_id
         )
+        version_workspace_id = g.api.project.version.get_or_create_versions_workspace(project_info.team_id)
+        delete_later_name = project_info.name + "_delete_later"
+        stale_project = g.api.project.get_info_by_name(
+            version_workspace_id, delete_later_name, raise_error=False
+        )
+        if stale_project is not None:
+            logger.warning(
+                f'Found leftover project version preview "{delete_later_name}" (ID: {stale_project.id}). '
+                f"Removing it before retrying."
+            )
+            g.api.project.remove_permanently(stale_project.id)
         project_to_del_info = g.api.project.edit_info(
-            id=int(version_info.preview_project_id), name=project_info.name + "_delete_later"
+            id=int(version_info.preview_project_id), name=delete_later_name
         )
         g.version_num = version_info.version
         logger.info(f"Restoring version {g.version_num} preview")
