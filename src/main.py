@@ -129,7 +129,7 @@ def main():
         )
         if stale_project is not None:
             logger.warning(
-                f'Found leftover project version preview "{delete_later_name}" (ID: {stale_project.id}). '
+                f"Found leftover project version preview '{delete_later_name}' (ID: {stale_project.id}). "
                 f"Removing it before retrying."
             )
             g.api.project.remove_permanently(stale_project.id)
