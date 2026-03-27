@@ -122,6 +122,7 @@ def main():
         version_info = g.api.project.version.get_info_by_id(
             project_info.id, version_id=g.version_id
         )
+        preview_project_id = int(version_info.preview_project_id) if version_info.preview_project_id is not None else None
         version_workspace_id = g.api.project.version.get_or_create_versions_workspace(project_info.team_id)
         delete_later_name = project_info.name + "_delete_later"
         stale_project = g.api.project.get_info_by_name(
@@ -134,9 +135,8 @@ def main():
             )
             g.api.project.remove_permanently(stale_project.id)
 
-        preview_project_id = int(version_info.preview_project_id)
-        if stale_project is not None and stale_project.id == preview_project_id:
-            # The stale project was the preview project itself — already deleted, nothing to rename
+        if preview_project_id is None or (stale_project is not None and stale_project.id == preview_project_id):
+            # No existing preview or the stale project was the preview itself — nothing to rename
             project_to_del_info = None
         else:
             project_to_del_info = g.api.project.edit_info(
