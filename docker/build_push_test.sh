@@ -16,6 +16,7 @@ SDK_VER=6.73.552
 
 # Always use project root as build context, and correct relative paths
 docker build \
+	--no-cache \
 	-f "$SCRIPT_DIR/Dockerfile.template" \
 	--build-arg tag_ref_name=$SDK_VER \
 	--build-arg RUNTIME_BASE_IMAGE=base-py-sdk-hardened \
