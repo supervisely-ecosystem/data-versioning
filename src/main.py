@@ -133,9 +133,15 @@ def main():
                 f"Removing it before retrying."
             )
             g.api.project.remove_permanently(stale_project.id)
-        project_to_del_info = g.api.project.edit_info(
-            id=int(version_info.preview_project_id), name=delete_later_name
-        )
+
+        preview_project_id = int(version_info.preview_project_id)
+        if stale_project is not None and stale_project.id == preview_project_id:
+            # The stale project was the preview project itself — already deleted, nothing to rename
+            project_to_del_info = None
+        else:
+            project_to_del_info = g.api.project.edit_info(
+                id=preview_project_id, name=delete_later_name
+            )
         g.version_num = version_info.version
         logger.info(f"Restoring version {g.version_num} preview")
         new_project_info = g.api.project.version.enable_preview(
@@ -160,7 +166,8 @@ def main():
             description=f"Project ID: {project_info.id}, Version ID: {g.version_id}",
             zmdi_icon="zmdi-eye",
         )
-        g.api.project.remove_permanently(project_to_del_info.id)
+        if project_to_del_info is not None:
+            g.api.project.remove_permanently(project_to_del_info.id)
     diff = timer.get_sec()
     logger.debug(f"Project version {g.action} took {diff:.2f} sec")
 
