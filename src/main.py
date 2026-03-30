@@ -61,8 +61,7 @@ def main():
                 if preview_project_info.preview_project_id is not None:
                     meta = WorkflowMeta(
                         node_settings=WorkflowSettings(
-                            url=g.api.server_address
-                            + f"/projects/{preview_project_info.preview_project_id}/datasets",
+                            url=f"/projects/{preview_project_info.preview_project_id}/datasets",
                             url_title="Open",
                             description="With Enabled Preview",
                         )
