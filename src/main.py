@@ -61,9 +61,8 @@ def main():
                 if preview_project_info.preview_project_id is not None:
                     meta = WorkflowMeta(
                         node_settings=WorkflowSettings(
-                            url=g.api.server_address
-                            + f"/projects/{preview_project_info.preview_project_id}/datasets",
-                            url_title="Open",
+                            url=f"/projects/{preview_project_info.preview_project_id}/datasets",
+                            url_title="Open Preview",
                             description="With Enabled Preview",
                         )
                     )
@@ -107,8 +106,8 @@ def main():
             meta=WorkflowMeta(
                 node_settings=WorkflowSettings(
                     title=f"Enable Version Preview",
-                    url=g.api.server_address + f"/projects/{new_project_info.id}/datasets",
-                    url_title="Open",
+                    url=f"/projects/{new_project_info.id}/datasets",
+                    url_title="Open Preview",
                 )
             ),
         )
@@ -155,8 +154,8 @@ def main():
             meta=WorkflowMeta(
                 node_settings=WorkflowSettings(
                     title=f"Restore Version Preview",
-                    url=g.api.server_address + f"/projects/{new_project_info.id}/datasets",
-                    url_title="Open",
+                    url=f"/projects/{new_project_info.id}/datasets",
+                    url_title="Open Preview",
                 )
             ),
         )
