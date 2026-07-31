@@ -1,3 +1,3 @@
 supervisely[versioning] @ git+https://github.com/supervisely/supervisely.git@fix-restore-duplicate-image-tags
 # supervisely[versioning] @ git+https://github.com/supervisely/supervisely.git@aca9097be3523854a3b99d2c819e478bd48f73e9
-supervisely[versioning]==6.74.19
+#supervisely[versioning]==6.74.19
