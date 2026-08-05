@@ -11,7 +11,7 @@ curl -sSL "https://raw.githubusercontent.com/supervisely-ecosystem/workflows/mas
 
 
 # Set SDK version
-SDK_VER=6.74.19
+SDK_VER=6.74.23
 
 
 # Always use project root as build context, and correct relative paths
