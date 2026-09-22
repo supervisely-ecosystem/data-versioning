@@ -622,29 +622,38 @@
 
 /* A segmented control, the product's own: one grey track, the chosen segment white with a
    border. The radios are what make it work, so they are hidden rather than removed. */
-.sly-vdiff__filter > input {
+.sly-vdiff__filter input {
     position: absolute;
     opacity: 0;
     pointer-events: none;
 }
 
-.sly-vdiff__filter {
+/* The two controls over the tree do different jobs and are drawn as different things: the
+   filter picks what is shown and is a segmented control, the action opens and shuts what is
+   there and is a button. Run together as one row of pills they read as six filters, one of
+   which mysteriously collapses the tree. */
+.sly-vdiff__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.sly-vdiff__chips {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
-}
-
-/* The tree is a block of its own inside the filter, which is a row of controls. */
-.sly-vdiff__filter > .sly-vdiff__tree {
-    flex: 1 1 100%;
-}
-
-.sly-vdiff__filter > label {
-    display: inline-block;
-    padding: 4px 12px;
-    margin: 0 4px 12px 0;
-    border-radius: 6px;
+    gap: 4px;
+    padding: 2px;
+    border-radius: 8px;
     background: #f3f4f6;
+}
+
+.sly-vdiff__chips label {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 6px;
     border: 1px solid transparent;
     color: #4b5563;
     font-size: 12px;
@@ -652,16 +661,16 @@
     user-select: none;
 }
 
-.sly-vdiff__filter > label:hover {
+.sly-vdiff__chips label:hover {
     color: #111827;
 }
 
-.sly-vdiff__filter > input:checked + label {
+.sly-vdiff__chips input:checked + label {
     background: #fff;
-    border-color: #d1d5db;
+    border-color: #e5e7eb;
     color: #111827;
     font-weight: 500;
-    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
 }
 
 /* ---------------------------------------------------------------------------------- */
@@ -764,16 +773,20 @@
 }
 
 .sly-vdiff__collapse {
-    margin-left: auto;
-    align-self: center;
+    padding: 4px 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: #fff;
+    color: #4b5563;
     font-size: 12px;
-    color: #2563eb;
     cursor: pointer;
     white-space: nowrap;
+    user-select: none;
 }
 
 .sly-vdiff__collapse:hover {
-    text-decoration: underline;
+    border-color: #d1d5db;
+    color: #111827;
 }
 
 .sly-vdiff__collapse--open,
@@ -782,44 +795,44 @@
 }
 
 .sly-vdiff__collapse-toggle:checked ~ .sly-vdiff__collapse--open {
-    display: inline;
+    display: inline-block;
 }
 
-.sly-vdiff__collapse-toggle:checked ~ .sly-vdiff__tree details[open] > summary ~ * {
+.sly-vdiff__filter:has(.sly-vdiff__collapse-toggle:checked) details[open] > summary ~ * {
     display: none;
 }
 
-.sly-vdiff__collapse-toggle:checked ~ .sly-vdiff__tree details[open] > summary::before {
+.sly-vdiff__filter:has(.sly-vdiff__collapse-toggle:checked) details[open] > summary::before {
     transform: none;
 }
 
-/* What the filter actually does. The checked radio's id selects every item that does not
-   carry the matching status and takes it off the page - this is the whole mechanism, and
-   without it the buttons look like a filter and filter nothing. */
-#vdiff-added:checked ~ .sly-vdiff__tree .sly-vdiff__item:not(.is-added),
-#vdiff-removed:checked ~ .sly-vdiff__tree .sly-vdiff__item:not(.is-removed),
-#vdiff-renamed:checked ~ .sly-vdiff__tree .sly-vdiff__item:not(.is-renamed),
-#vdiff-moved:checked ~ .sly-vdiff__tree .sly-vdiff__item:not(.is-moved),
-#vdiff-contentChanged:checked ~ .sly-vdiff__tree .sly-vdiff__item:not(.is-contentChanged),
-#vdiff-annotationChanged:checked ~ .sly-vdiff__tree .sly-vdiff__item:not(.is-annotationChanged) {
+/* What the filter actually does: the checked radio takes every item without that status off
+   the page. Asked of the block rather than of the input's siblings, so the control can be
+   grouped where it belongs in the layout instead of where the selector needs it. */
+.sly-vdiff__filter:has(#vdiff-added:checked) .sly-vdiff__item:not(.is-added),
+.sly-vdiff__filter:has(#vdiff-removed:checked) .sly-vdiff__item:not(.is-removed),
+.sly-vdiff__filter:has(#vdiff-renamed:checked) .sly-vdiff__item:not(.is-renamed),
+.sly-vdiff__filter:has(#vdiff-moved:checked) .sly-vdiff__item:not(.is-moved),
+.sly-vdiff__filter:has(#vdiff-contentChanged:checked) .sly-vdiff__item:not(.is-contentChanged),
+.sly-vdiff__filter:has(#vdiff-annotationChanged:checked) .sly-vdiff__item:not(.is-annotationChanged) {
     display: none;
 }
 
 /* A dataset with nothing to show under the current filter goes with its items. Asked as
    "has no item of this status" rather than "has no visible item": CSS cannot see that a
    rule above hid something, but it can see which classes are in the subtree. */
-#vdiff-added:checked ~ .sly-vdiff__tree .sly-vdiff__ds:not(:has(.is-added)),
-#vdiff-removed:checked ~ .sly-vdiff__tree .sly-vdiff__ds:not(:has(.is-removed)),
-#vdiff-renamed:checked ~ .sly-vdiff__tree .sly-vdiff__ds:not(:has(.is-renamed)),
-#vdiff-moved:checked ~ .sly-vdiff__tree .sly-vdiff__ds:not(:has(.is-moved)),
-#vdiff-contentChanged:checked ~ .sly-vdiff__tree .sly-vdiff__ds:not(:has(.is-contentChanged)),
-#vdiff-annotationChanged:checked ~ .sly-vdiff__tree .sly-vdiff__ds:not(:has(.is-annotationChanged)) {
+.sly-vdiff__filter:has(#vdiff-added:checked) .sly-vdiff__ds:not(:has(.is-added)),
+.sly-vdiff__filter:has(#vdiff-removed:checked) .sly-vdiff__ds:not(:has(.is-removed)),
+.sly-vdiff__filter:has(#vdiff-renamed:checked) .sly-vdiff__ds:not(:has(.is-renamed)),
+.sly-vdiff__filter:has(#vdiff-moved:checked) .sly-vdiff__ds:not(:has(.is-moved)),
+.sly-vdiff__filter:has(#vdiff-contentChanged:checked) .sly-vdiff__ds:not(:has(.is-contentChanged)),
+.sly-vdiff__filter:has(#vdiff-annotationChanged:checked) .sly-vdiff__ds:not(:has(.is-annotationChanged)) {
     display: none;
 }
 
 /* The dataset line counts everything that changed in it, which stops being what the tree
    under it is showing as soon as a filter is on. */
-.sly-vdiff__filter > input:not(#vdiff-all):checked ~ .sly-vdiff__tree .sly-vdiff__ds-summary {
+.sly-vdiff__filter:has(input:not(#vdiff-all):checked) .sly-vdiff__ds-summary {
     display: none;
 }
 

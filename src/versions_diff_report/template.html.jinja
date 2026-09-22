@@ -272,22 +272,27 @@
         </p>
         {% endif %}
 
-        {# A radio group, because the filter has to work without script: the checked input's
-           sibling selectors below hide every item that does not carry the matching class. #}
+        {# Two different things, kept apart: on the left the filter, which picks what the
+           tree shows, and on the right one action, which opens and shuts it. Both are
+           inputs and labels because no script runs here; the styles below make sure they do
+           not read as one row of buttons. #}
         <div class="sly-vdiff__filter">
-            <input type="radio" name="vdiff-filter" id="vdiff-all" checked>
-            <label for="vdiff-all">all</label>
-            {% for entry in filters %}
-            <input type="radio" name="vdiff-filter" id="vdiff-{{ entry.status }}">
-            <label for="vdiff-{{ entry.status }}">{{ entry.label }}</label>
-            {% endfor %}
+            <div class="sly-vdiff__toolbar">
+                <div class="sly-vdiff__chips" role="group" aria-label="Filter by change">
+                    <input type="radio" name="vdiff-filter" id="vdiff-all" checked>
+                    <label for="vdiff-all">all</label>
+                    {% for entry in filters %}
+                    <input type="radio" name="vdiff-filter" id="vdiff-{{ entry.status }}">
+                    <label for="vdiff-{{ entry.status }}">{{ entry.label }}</label>
+                    {% endfor %}
+                </div>
 
-            {#- Collapse all, without a script to close anything: while the box is checked
-                every branch reads as shut, whatever each one's own open state is, and
-                unchecking hands every branch back the state it had. -#}
-            <input type="checkbox" id="vdiff-collapse" class="sly-vdiff__collapse-toggle">
-            <label class="sly-vdiff__collapse sly-vdiff__collapse--close" for="vdiff-collapse">Collapse all</label>
-            <label class="sly-vdiff__collapse sly-vdiff__collapse--open" for="vdiff-collapse">Expand back</label>
+                {#- Nothing is actually closed: while the box is checked every branch reads as
+                    shut, and unchecking hands each one back the state it had. -#}
+                <input type="checkbox" id="vdiff-collapse" class="sly-vdiff__collapse-toggle">
+                <label class="sly-vdiff__collapse sly-vdiff__collapse--close" for="vdiff-collapse">Collapse all</label>
+                <label class="sly-vdiff__collapse sly-vdiff__collapse--open" for="vdiff-collapse">Expand back</label>
+            </div>
 
             <div class="sly-vdiff__tree">
                 {% for dataset in tree %}
