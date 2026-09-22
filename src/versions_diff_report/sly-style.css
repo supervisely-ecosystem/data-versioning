@@ -157,27 +157,30 @@
 }
 
 /* The breakdown: one tile per outcome, separated by rules rather than by boxes, so the row
-   reads as one measurement taken apart. */
+   reads as one measurement taken apart.
+
+   The card is as wide as the tiles in it, not as wide as the page: stretched, three outcomes
+   stand a hand apart with nothing between them, and the row stops reading as one thing. */
 .sly-vdiff__summary-card {
-    display: flex;
-    align-items: flex-start;
+    display: inline-flex;
+    align-items: stretch;
     flex-wrap: wrap;
     row-gap: 16px;
+    max-width: 100%;
 }
 
 .sly-vdiff__totals {
     display: flex;
     flex-wrap: wrap;
     row-gap: 16px;
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     min-width: 0;
 }
 
 .sly-vdiff__total {
-    padding: 0 14px;
+    padding: 0 16px;
     border-left: 1px solid #f0f1f3;
-    flex: 1 1 96px;
-    min-width: 96px;
+    flex: 0 0 auto;
 }
 
 .sly-vdiff__total:first-child {
