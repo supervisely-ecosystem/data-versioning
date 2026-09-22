@@ -14,7 +14,10 @@
    into a Vue template, whose parser reads the first one as the start of a tag: everything
    after it stops being text, the style element is handed elements instead of a stylesheet,
    and the report renders with no styles at all. */
+/* The page has a measure. Cards drawn across a 2000px screen leave a row of numbers at one
+   end and their labels at the other, and a table of five names becomes a field of white. */
 .sly-vdiff {
+    max-width: 1100px;
     font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto,
         'Helvetica Neue', Arial, sans-serif;
     font-size: 13px;
@@ -277,31 +280,35 @@
     display: flex;
     flex-wrap: wrap;
     gap: 16px;
-    align-items: flex-start;
+    align-items: stretch;
 }
 
+/* The column stretches to the tallest of the row and its card fills it, so two cards beside
+   each other end level whatever is in them - and one card on its own is only as tall as what
+   it holds. */
 .sly-vdiff__column {
+    display: flex;
+    flex-direction: column;
     flex: 1 1 340px;
     min-width: 0;
+}
+
+.sly-vdiff__column > .sly-vdiff__card {
+    flex: 1 1 auto;
 }
 
 /* ---------------------------------------------------------------------------------- */
 /* Lists, read as tables                                                                */
 /* ---------------------------------------------------------------------------------- */
 
-/* Four columns sized to their contents, with a hairline under every row - the same table
-   the product draws for its own breakdowns. */
-/* The three number columns are fixed rather than sized to their contents: a column that
-   happens to be empty would otherwise collapse, and the numbers of one row would not line
-   up with the numbers of the next.
-
-   Five rows tall whether it has five rows or one, so the cards of a row stand level and the
-   page does not change shape with the project. */
+/* Four columns, with a hairline under every row - the same table the product draws for its
+   own breakdowns. The three number columns are fixed rather than sized to their contents: a
+   column that happens to be empty would otherwise collapse, and the numbers of one row would
+   not line up with the numbers of the next. */
 .sly-vdiff__list {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 54px 54px 54px;
     align-content: start;
-    min-height: 170px;
 }
 
 .sly-vdiff__list--defs {
@@ -545,9 +552,10 @@
     overflow-y: auto;
 }
 
-/* Inside the dialog the list is as long as it is: the five-row floor belongs to the card. */
-.sly-vdiff__dialog-body .sly-vdiff__list {
-    min-height: 0;
+/* The footer line is pushed to the bottom of the card, which is what keeps the "Show all" of
+   a short card level with the one beside it. */
+.sly-vdiff__column > .sly-vdiff__card > .sly-vdiff__more-row:last-child {
+    margin-top: auto;
 }
 
 /* ---------------------------------------------------------------------------------- */
