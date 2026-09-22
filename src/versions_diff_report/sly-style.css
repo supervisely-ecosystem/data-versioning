@@ -632,18 +632,33 @@
    filter picks what is shown and is a segmented control, the action opens and shuts what is
    there and is a button. Run together as one row of pills they read as six filters, one of
    which mysteriously collapses the tree. */
+/* The toolbar stays on screen while the tree is read: the filter and the two buttons are
+   what a reader reaches for halfway down a long list, and having to scroll back to the top
+   for them is the reason they were not used.
+
+   It is the first of three sticky steps - toolbar, dataset, item - so its height is fixed
+   rather than left to its contents: the two below it are placed at that number, and a row
+   of chips that wrapped to a second line would push them out of place. Narrow enough for
+   that to matter, the chips scroll sideways instead of wrapping. */
 .sly-vdiff__toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 3;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    flex-wrap: wrap;
     gap: 12px;
-    margin-bottom: 12px;
+    height: 48px;
+    margin: -16px -16px 12px;
+    padding: 0 16px;
+    background: #fff;
+    border-bottom: 1px solid #f0f1f3;
 }
 
 .sly-vdiff__chips {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
     gap: 4px;
     padding: 2px;
     border-radius: 8px;
@@ -741,7 +756,7 @@
    above each row is that seam's insurance, painting the gap in the same white. */
 .sly-vdiff__ds > summary {
     position: sticky;
-    top: 0;
+    top: 48px;
     z-index: 2;
     height: 34px;
     padding: 6px 0;
@@ -752,7 +767,7 @@
 
 .sly-vdiff__item-body > summary {
     position: sticky;
-    top: 34px;
+    top: 82px;
     z-index: 1;
     height: 34px;
     background: #fff;
