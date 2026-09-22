@@ -282,6 +282,13 @@
             <label for="vdiff-{{ entry.status }}">{{ entry.label }}</label>
             {% endfor %}
 
+            {#- Collapse all, without a script to close anything: while the box is checked
+                every branch reads as shut, whatever each one's own open state is, and
+                unchecking hands every branch back the state it had. -#}
+            <input type="checkbox" id="vdiff-collapse" class="sly-vdiff__collapse-toggle">
+            <label class="sly-vdiff__collapse sly-vdiff__collapse--close" for="vdiff-collapse">Collapse all</label>
+            <label class="sly-vdiff__collapse sly-vdiff__collapse--open" for="vdiff-collapse">Expand back</label>
+
             <div class="sly-vdiff__tree">
                 {% for dataset in tree %}
                 <details class="sly-vdiff__ds">

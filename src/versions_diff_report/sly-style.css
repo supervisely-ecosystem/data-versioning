@@ -628,6 +628,17 @@
     pointer-events: none;
 }
 
+.sly-vdiff__filter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* The tree is a block of its own inside the filter, which is a row of controls. */
+.sly-vdiff__filter > .sly-vdiff__tree {
+    flex: 1 1 100%;
+}
+
 .sly-vdiff__filter > label {
     display: inline-block;
     padding: 4px 12px;
@@ -710,9 +721,25 @@
     border-bottom: 0;
 }
 
+/* Where you are, while you scroll. The dataset line sticks to the top of the window and the
+   item line sticks under it, so the two lines above the rows always name the branch those
+   rows belong to; the next dataset pushes the previous one off and takes its place. Both
+   need a ground of their own - a transparent sticky row is read through by what scrolls
+   under it. */
 .sly-vdiff__ds > summary {
+    position: sticky;
+    top: 0;
+    z-index: 2;
     padding: 6px 0;
     font-weight: 500;
+    background: #fff;
+}
+
+.sly-vdiff__item-body > summary {
+    position: sticky;
+    top: 32px;
+    z-index: 1;
+    background: #fff;
 }
 
 .sly-vdiff__ds-name {
@@ -725,6 +752,69 @@
 .sly-vdiff__ds-summary {
     margin-left: auto;
     padding-left: 16px;
+}
+
+/* Collapse all. The checkbox hides what every open branch holds and puts its triangle back,
+   so the tree reads as shut while it is checked; nothing is actually closed, which is what
+   lets the reader have their own open branches back by unchecking it. */
+.sly-vdiff__collapse-toggle {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.sly-vdiff__collapse {
+    margin-left: auto;
+    align-self: center;
+    font-size: 12px;
+    color: #2563eb;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.sly-vdiff__collapse:hover {
+    text-decoration: underline;
+}
+
+.sly-vdiff__collapse--open,
+.sly-vdiff__collapse-toggle:checked ~ .sly-vdiff__collapse--close {
+    display: none;
+}
+
+.sly-vdiff__collapse-toggle:checked ~ .sly-vdiff__collapse--open {
+    display: inline;
+}
+
+.sly-vdiff__collapse-toggle:checked ~ .sly-vdiff__tree details[open] > summary ~ * {
+    display: none;
+}
+
+.sly-vdiff__collapse-toggle:checked ~ .sly-vdiff__tree details[open] > summary::before {
+    transform: none;
+}
+
+/* What the filter actually does. The checked radio's id selects every item that does not
+   carry the matching status and takes it off the page - this is the whole mechanism, and
+   without it the buttons look like a filter and filter nothing. */
+#vdiff-added:checked ~ .sly-vdiff__tree .sly-vdiff__item:not(.is-added),
+#vdiff-removed:checked ~ .sly-vdiff__tree .sly-vdiff__item:not(.is-removed),
+#vdiff-renamed:checked ~ .sly-vdiff__tree .sly-vdiff__item:not(.is-renamed),
+#vdiff-moved:checked ~ .sly-vdiff__tree .sly-vdiff__item:not(.is-moved),
+#vdiff-contentChanged:checked ~ .sly-vdiff__tree .sly-vdiff__item:not(.is-contentChanged),
+#vdiff-annotationChanged:checked ~ .sly-vdiff__tree .sly-vdiff__item:not(.is-annotationChanged) {
+    display: none;
+}
+
+/* A dataset with nothing to show under the current filter goes with its items. Asked as
+   "has no item of this status" rather than "has no visible item": CSS cannot see that a
+   rule above hid something, but it can see which classes are in the subtree. */
+#vdiff-added:checked ~ .sly-vdiff__tree .sly-vdiff__ds:not(:has(.is-added)),
+#vdiff-removed:checked ~ .sly-vdiff__tree .sly-vdiff__ds:not(:has(.is-removed)),
+#vdiff-renamed:checked ~ .sly-vdiff__tree .sly-vdiff__ds:not(:has(.is-renamed)),
+#vdiff-moved:checked ~ .sly-vdiff__tree .sly-vdiff__ds:not(:has(.is-moved)),
+#vdiff-contentChanged:checked ~ .sly-vdiff__tree .sly-vdiff__ds:not(:has(.is-contentChanged)),
+#vdiff-annotationChanged:checked ~ .sly-vdiff__tree .sly-vdiff__ds:not(:has(.is-annotationChanged)) {
+    display: none;
 }
 
 /* The dataset line counts everything that changed in it, which stops being what the tree
