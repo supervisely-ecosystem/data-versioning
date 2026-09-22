@@ -296,17 +296,26 @@
 
 /* Every cell fills its row and centres its own content. Centring the cell instead - which
    `align-items: center` on the grid does - shrinks it to its content, and then the row's
-   hairline is drawn at four different heights and reads as a broken line. */
+   hairline is drawn at four different heights and reads as a broken line.
+
+   The height is fixed rather than a floor: a chip is a pixel taller than a line of text and
+   a long value is two lines, so a floor gives rows of 34, 35 and 49 - and then the rows of
+   one card no longer line up with the rows of the card beside it. Nothing here may be taller
+   than its row, so what does not fit is cut. */
 .sly-vdiff__cell {
     display: flex;
     align-items: center;
-    min-height: 34px;
-    padding: 7px 0;
+    height: 34px;
+    padding: 0;
+    overflow: hidden;
     border-top: 1px solid #f0f1f3;
     min-width: 0;
 }
 
-.sly-vdiff__list > .sly-vdiff__cell:nth-child(-n + 4),
+/* `--defs` carries both class names, so the four-column rule has to say it does not mean
+   this list: on a three-column grid it reaches into the second row and takes the line off
+   the top of it. */
+.sly-vdiff__list:not(.sly-vdiff__list--defs) > .sly-vdiff__cell:nth-child(-n + 4),
 .sly-vdiff__list--defs > .sly-vdiff__cell:nth-child(-n + 3) {
     border-top: 0;
 }
@@ -323,10 +332,11 @@
     padding-right: 12px;
 }
 
-.sly-vdiff__list--defs .sly-vdiff__cell:last-child {
+/* Every third cell is the changes column - `:last-child` is the last cell of the grid, not
+   the last cell of a row. Block rather than flex, because text-overflow needs a block. */
+.sly-vdiff__list--defs > .sly-vdiff__cell:nth-child(3n) {
     display: block;
     line-height: 34px;
-    overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
