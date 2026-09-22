@@ -449,20 +449,14 @@
     display: flex;
 }
 
-/* Kept even when there is nothing more to show: an empty line here is what makes a card of
-   three rows stand as tall as a card of forty. */
+/* Only when there is something more to show. A card of three rows is made level with the
+   card beside it by the row they sit in, not by a rule drawn under nothing. */
 .sly-vdiff__more-row {
     display: flex;
     align-items: center;
     min-height: 30px;
     margin-top: 8px;
     border-top: 1px solid #f0f1f3;
-}
-
-/* Holding the height is the whole job when there is nothing more to show; a rule under
-   nothing reads as a row that failed to draw. */
-.sly-vdiff__more-row:empty {
-    border-top: 0;
 }
 
 .sly-vdiff__more {

@@ -116,7 +116,6 @@
     {% endset %}
     {{ dialog(id, noun | capitalize, rows | length, noun, omitted, full) }}
     {% else %}
-    <div class="sly-vdiff__more-row"></div>
     {% if omitted %}
     <p class="sly-vdiff__dim">and {{ omitted }} more {{ noun }} not drawn here</p>
     {% endif %}
@@ -138,7 +137,6 @@
     {% endset %}
     {{ dialog(id, noun | capitalize, entry.shown | length, noun, entry.omitted, full) }}
     {% else %}
-    <div class="sly-vdiff__more-row"></div>
     {% if entry.omitted %}
     <p class="sly-vdiff__dim">and {{ entry.omitted }} more {{ noun }} not drawn here</p>
     {% endif %}
