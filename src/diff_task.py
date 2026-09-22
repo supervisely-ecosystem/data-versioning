@@ -132,11 +132,15 @@ def run(
 
     _refuse_if_running(api, team_id, remote_dir, task_id, log_meta)
 
+    # Both identities: the ids key the directory and the numbers are what a version is
+    # called everywhere a person reads one.
     status = {
         "status": STATUS_IN_PROGRESS,
         "taskId": task_id,
         "versionIdFrom": version_id_from,
         "versionIdTo": version_id_to,
+        "versionFrom": version_from.version,
+        "versionTo": version_to.version,
         "startedAt": _now(),
     }
     _write_status(api, team_id, remote_dir, status)
@@ -305,7 +309,9 @@ def _write_status(api: sly.Api, team_id: int, remote_dir: str, payload: dict) ->
     return payload
 
 
-def _unsupported_diff(version_id: int, snapshot: VersionSnapshot) -> Optional[dict]:
+def _unsupported_diff(
+    version_id: int, number: int, snapshot: VersionSnapshot
+) -> Optional[dict]:
     """Why this snapshot cannot take part in a comparison, in a form a caller can act on.
 
     The panel gates on the format recorded in `versions.json`, which is the cheap answer;
@@ -324,8 +330,11 @@ def _unsupported_diff(version_id: int, snapshot: VersionSnapshot) -> Optional[di
             else "no_server_figure_ids"
         ),
         "versionId": version_id,
+        "version": number,
         "schemaVersion": snapshot.schema_version,
-        "message": f"Version {version_id} cannot be compared: {reason}.",
+        # Named the way the version list names it. The id stays in its own field, for the
+        # caller that has to match this against a pair.
+        "message": f"Version v{number} cannot be compared: {reason}.",
     }
 
 
@@ -361,11 +370,11 @@ def _compute_and_write(
     stage = time.perf_counter()
     with VersionSnapshot.open(api, project_id, version_id_from) as snapshot_from:
         with VersionSnapshot.open(api, project_id, version_id_to) as snapshot_to:
-            for version_id, snapshot in (
-                (version_id_from, snapshot_from),
-                (version_id_to, snapshot_to),
+            for version_id, number, snapshot in (
+                (version_id_from, version_from.version, snapshot_from),
+                (version_id_to, version_to.version, snapshot_to),
             ):
-                refusal = _unsupported_diff(version_id, snapshot)
+                refusal = _unsupported_diff(version_id, number, snapshot)
                 if refusal is not None:
                     raise DiffUnsupported(refusal)
             opened_msec = msec(stage)

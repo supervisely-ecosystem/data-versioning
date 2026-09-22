@@ -210,7 +210,7 @@ def compare_versions(project_info):
         )
         raise
 
-    pair = f"versions {status['versionIdFrom']} and {status['versionIdTo']}"
+    pair = f"v{status['versionFrom']} and v{status['versionTo']}"
     if status["status"] == diff_task.STATUS_UNSUPPORTED:
         g.api.app.set_output_error(
             g.TASK_ID,

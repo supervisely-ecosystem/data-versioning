@@ -314,7 +314,10 @@ def test_an_old_snapshot_is_recorded_as_unsupported_not_failed(
     assert status["code"] == "schema_too_old"
     assert status["versionId"] == VERSION_ID_FROM
     assert status["schemaVersion"] == "v2.0.0"
-    assert str(VERSION_ID_FROM) in status["message"]
+    # Named by its number, which is what a version is called in the product; the id is a
+    # field of its own for whoever has to match this against a pair.
+    assert status["version"] == VERSION_FROM
+    assert f"v{VERSION_FROM}" in status["message"]
     # The refusal is the only thing published; there is no report to show.
     assert files.listing() == ["status.json"]
     assert files.status() == status
