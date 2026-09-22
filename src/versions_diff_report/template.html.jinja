@@ -260,6 +260,12 @@
     </div>
     {% endif %}
 
+    </div>
+
+    {#- Out of the v-pre island on purpose. The renderer compiles this template, and v-pre is
+        what keeps it from reading the diff's own text as Vue markup - but a control needs to
+        be compiled to do anything, so the two buttons over the tree live out here and the
+        parts drawn from data keep their own v-pre below. -#}
     <div class="sly-vdiff__block sly-vdiff__tree-block">
         <h2>What changed</h2>
 
@@ -276,7 +282,7 @@
            the checked input take every item without that status off the page. #}
         <div class="sly-vdiff__filter">
             <div class="sly-vdiff__toolbar">
-                <div class="sly-vdiff__chips" role="group" aria-label="Filter by change">
+                <div class="sly-vdiff__chips" role="group" aria-label="Filter by change" v-pre>
                     <input type="radio" name="vdiff-filter" id="vdiff-all" checked>
                     <label for="vdiff-all">all</label>
                     {% for entry in filters %}
@@ -284,9 +290,26 @@
                     <label for="vdiff-{{ entry.status }}">{{ entry.label }}</label>
                     {% endfor %}
                 </div>
+
+                {#- Really open and close the branches, rather than draw the tree as if: a
+                    button that only drew it would sit on top of every branch and stop the
+                    reader opening one by hand. Which of the two is offered is left to the
+                    stylesheet, which can see the branches' real state. -#}
+                <div class="sly-vdiff__tree-actions">
+                    <button
+                        type="button"
+                        class="sly-vdiff__collapse sly-vdiff__collapse--open"
+                        @click="$el.querySelectorAll('.sly-vdiff__tree details').forEach(node => { node.open = true })"
+                    >Expand all</button>
+                    <button
+                        type="button"
+                        class="sly-vdiff__collapse sly-vdiff__collapse--shut"
+                        @click="$el.querySelectorAll('.sly-vdiff__tree details').forEach(node => { node.open = false })"
+                    >Collapse all</button>
+                </div>
             </div>
 
-            <div class="sly-vdiff__tree">
+            <div class="sly-vdiff__tree" v-pre>
                 {% for dataset in tree %}
                 <details class="sly-vdiff__ds">
                     <summary>
@@ -360,6 +383,5 @@
             </div>
         </div>
         </div>
-    </div>
     </div>
 </div>

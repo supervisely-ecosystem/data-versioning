@@ -771,6 +771,39 @@
     padding-left: 16px;
 }
 
+/* Expand all / Collapse all. The buttons really set every branch's state - see the template
+   - so the stylesheet only has to decide which of them is worth offering, and it asks the
+   branches themselves: nothing open, only Expand; nothing closed, only Collapse; some of
+   each, both. The question is live, so opening one branch by hand updates the pair. */
+.sly-vdiff__tree-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.sly-vdiff__collapse {
+    display: none;
+    padding: 4px 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: #fff;
+    color: #4b5563;
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 18px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.sly-vdiff__collapse:hover {
+    border-color: #d1d5db;
+    color: #111827;
+}
+
+.sly-vdiff__filter:has(.sly-vdiff__tree details:not([open])) .sly-vdiff__collapse--open,
+.sly-vdiff__filter:has(.sly-vdiff__tree details[open]) .sly-vdiff__collapse--shut {
+    display: inline-block;
+}
+
 /* What the filter actually does: the checked radio takes every item without that status off
    the page. Asked of the block rather than of the input's siblings, so the control can be
    grouped where it belongs in the layout instead of where the selector needs it. */
