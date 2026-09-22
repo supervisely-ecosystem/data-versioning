@@ -275,21 +275,30 @@
 /* ---------------------------------------------------------------------------------- */
 
 /* Each half is its own card under its own label, rather than two halves of one: a label
-   always sits above the card it names, wherever it is on the page. */
+   always sits above the card it names, wherever it is on the page.
+
+   A grid of two, not a row that fills: a table left alone by its pair keeps to its own half
+   instead of spreading over the page, which is the width these tables are read at. */
 .sly-vdiff__columns {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
     align-items: stretch;
 }
 
-/* The column stretches to the tallest of the row and its card fills it, so two cards beside
-   each other end level whatever is in them - and one card on its own is only as tall as what
-   it holds. */
+/* Narrower than two tables can stand side by side: one under the other, each full width. */
+@media (max-width: 760px) {
+    .sly-vdiff__columns {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+/* The column stretches to the tallest of its row and its card fills it, so two cards beside
+   each other end level whatever is in them - and since a card holds five rows at most, that
+   is as tall as a row of them ever gets. A card on its own is as tall as what it holds. */
 .sly-vdiff__column {
     display: flex;
     flex-direction: column;
-    flex: 1 1 340px;
     min-width: 0;
 }
 
