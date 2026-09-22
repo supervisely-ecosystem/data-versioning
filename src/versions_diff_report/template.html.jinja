@@ -272,10 +272,8 @@
         </p>
         {% endif %}
 
-        {# Two different things, kept apart: on the left the filter, which picks what the
-           tree shows, and on the right one action, which opens and shuts it. Both are
-           inputs and labels because no script runs here; the styles below make sure they do
-           not read as one row of buttons. #}
+        {# A radio group, because the filter has to work without script: the rules keyed on
+           the checked input take every item without that status off the page. #}
         <div class="sly-vdiff__filter">
             <div class="sly-vdiff__toolbar">
                 <div class="sly-vdiff__chips" role="group" aria-label="Filter by change">
@@ -285,18 +283,6 @@
                     <input type="radio" name="vdiff-filter" id="vdiff-{{ entry.status }}">
                     <label for="vdiff-{{ entry.status }}">{{ entry.label }}</label>
                     {% endfor %}
-                </div>
-
-                {#- Three states of the tree, one radio group: each branch on its own (the
-                    state the page opens in), everything open, everything shut. The two
-                    buttons below offer whichever of those the tree is not already in - both,
-                    when some branches are open and some are not. -#}
-                <input type="radio" name="vdiff-tree" id="vdiff-tree-auto" checked>
-                <input type="radio" name="vdiff-tree" id="vdiff-tree-open">
-                <input type="radio" name="vdiff-tree" id="vdiff-tree-shut">
-                <div class="sly-vdiff__tree-actions">
-                    <label class="sly-vdiff__collapse" for="vdiff-tree-open">Expand all</label>
-                    <label class="sly-vdiff__collapse" for="vdiff-tree-shut">Collapse all</label>
                 </div>
             </div>
 

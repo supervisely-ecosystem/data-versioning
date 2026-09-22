@@ -732,23 +732,31 @@
 
 /* Where you are, while you scroll. The dataset line sticks to the top of the window and the
    item line sticks under it, so the two lines above the rows always name the branch those
-   rows belong to; the next dataset pushes the previous one off and takes its place. Both
-   need a ground of their own - a transparent sticky row is read through by what scrolls
-   under it. */
+   rows belong to; the next dataset pushes the previous one off and takes its place.
+
+   Both need a ground of their own - a transparent sticky row is read through by what scrolls
+   under it - and the two grounds have to meet exactly. Hence a fixed height for the first
+   and the same number as the second one's offset: left to their content, they differ by a
+   pixel or two and a strip of the text passing behind shows through the seam. The shadow
+   above each row is that seam's insurance, painting the gap in the same white. */
 .sly-vdiff__ds > summary {
     position: sticky;
     top: 0;
     z-index: 2;
+    height: 34px;
     padding: 6px 0;
     font-weight: 500;
     background: #fff;
+    box-shadow: 0 -6px 0 #fff;
 }
 
 .sly-vdiff__item-body > summary {
     position: sticky;
-    top: 32px;
+    top: 34px;
     z-index: 1;
+    height: 34px;
     background: #fff;
+    box-shadow: 0 -6px 0 #fff;
 }
 
 .sly-vdiff__ds-name {
@@ -762,67 +770,6 @@
     margin-left: auto;
     padding-left: 16px;
 }
-
-/* Expand all / Collapse all. Nothing is opened or closed: while one of these is chosen the
-   tree is drawn as if it were, which is all CSS can do without a script. The cost is that a
-   single branch cannot be worked while a whole-tree state is chosen - the way back is the
-   other button. */
-.sly-vdiff__filter:has(#vdiff-tree-shut:checked) details[open] > summary ~ * {
-    display: none;
-}
-
-.sly-vdiff__filter:has(#vdiff-tree-shut:checked) details[open] > summary::before {
-    transform: none;
-}
-
-.sly-vdiff__filter:has(#vdiff-tree-open:checked) details:not([open]) > summary ~ * {
-    display: block;
-}
-
-/* The same thing again for the engines that stopped hiding a closed branch with `display`:
-   there the content sits behind `content-visibility` on a pseudo-element, and an author rule
-   on the children reaches nothing. Harmless where the pseudo-element does not exist. */
-.sly-vdiff__filter:has(#vdiff-tree-open:checked) details::details-content {
-    content-visibility: visible;
-}
-
-.sly-vdiff__filter:has(#vdiff-tree-open:checked) details:not([open]) > summary::before {
-    transform: rotate(90deg);
-}
-
-.sly-vdiff__tree-actions {
-    display: flex;
-    gap: 8px;
-}
-
-/* A button offers the state the tree is not in. Everything open: only Collapse. Everything
-   shut: only Expand. Some of each: both, because either is a move from here. */
-.sly-vdiff__filter:has(#vdiff-tree-shut:checked) label[for="vdiff-tree-open"],
-.sly-vdiff__filter:has(#vdiff-tree-open:checked) label[for="vdiff-tree-shut"],
-.sly-vdiff__filter:has(#vdiff-tree-auto:checked):has(.sly-vdiff__tree details[open]) label[for="vdiff-tree-shut"],
-.sly-vdiff__filter:has(#vdiff-tree-auto:checked):has(.sly-vdiff__tree details:not([open])) label[for="vdiff-tree-open"] {
-    display: inline-block;
-}
-
-.sly-vdiff__collapse {
-    display: none;
-    padding: 4px 10px;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
-    background: #fff;
-    color: #4b5563;
-    font-size: 12px;
-    cursor: pointer;
-    white-space: nowrap;
-    user-select: none;
-}
-
-.sly-vdiff__collapse:hover {
-    border-color: #d1d5db;
-    color: #111827;
-}
-
-
 
 /* What the filter actually does: the checked radio takes every item without that status off
    the page. Asked of the block rather than of the input's siblings, so the control can be
