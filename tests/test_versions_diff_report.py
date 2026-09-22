@@ -254,6 +254,23 @@ def test_a_class_of_any_shape_still_wears_an_icon(tmp_path):
     assert "zmdi-circle" not in template
 
 
+def test_the_stylesheet_carries_no_angle_bracket(tmp_path):
+    """One `<` in the stylesheet takes the whole report's styling with it.
+
+    The file is included into a Vue template, and that parser reads the first angle bracket
+    as the start of a tag: the rest of the stylesheet stops being text, the style element is
+    handed elements instead of CSS, and the page renders as a column of bare text. A comment
+    mentioning a tag by name is enough to do it, which is how it happened.
+    """
+    before = one_dataset(tmp_path, "a").image(100, 1, "img1", updated_at="t1")
+    after = one_dataset(tmp_path, "b").image(100, 1, "img1", updated_at="t2")
+
+    _, template = report_of(tmp_path, before, after)
+    stylesheet = template.split("<sly-style>")[1].split("</sly-style>")[0]
+
+    assert "<" not in stylesheet
+
+
 def test_the_overview_draws_five_rows_and_puts_the_rest_in_a_dialog(tmp_path):
     """A project's whole class list in front of the tree is a wall. Five rows, and the rest
     in a dialog - a checkbox and labels, because no script of ours runs on this page."""

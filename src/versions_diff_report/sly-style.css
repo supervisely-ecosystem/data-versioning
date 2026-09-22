@@ -7,8 +7,13 @@
    four status colours are the only saturation on the page, and they are always a pale fill
    under a dark text rather than a block of colour.
 
-   Nothing here may rely on script: the tree opens through <details> and the filter is a
-   radio group with sibling selectors, so what looks like a control is a label. */
+   Nothing here may rely on script: the tree opens through details/summary and the filter is
+   a radio group with sibling selectors, so what looks like a control is a label.
+
+   And nothing here may contain an angle bracket, comments included. This file is included
+   into a Vue template, whose parser reads the first one as the start of a tag: everything
+   after it stops being text, the style element is handed elements instead of a stylesheet,
+   and the report renders with no styles at all. */
 .sly-vdiff {
     font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto,
         'Helvetica Neue', Arial, sans-serif;
