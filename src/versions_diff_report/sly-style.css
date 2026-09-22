@@ -111,27 +111,41 @@
 /* ---------------------------------------------------------------------------------- */
 
 /* How much of the project moved at all. Every tile beside it is a part of this number, so
-   it is given the left of the card and a rule to separate it from its own breakdown. */
+   it leads the row - as a filled panel bled out to the card's own edges, not as bigger type.
+   Size is what says "this is a number"; a number that is larger than the four it is made of
+   says it is a different measurement. The padding here is the card's, negated by the margin,
+   so the fill grows around the text and the five numbers stay on one line. */
 .sly-vdiff__headline {
-    padding-right: 20px;
-    border-right: 1px solid #e5e7eb;
-    margin-right: 20px;
     flex: none;
+    align-self: stretch;
+    padding: 16px 20px 16px 16px;
+    margin: -16px 20px -16px -16px;
+    background: #f9fafb;
+    border-right: 1px solid #e5e7eb;
+    border-radius: 7px 0 0 7px;
 }
 
+.sly-vdiff__headline .sly-vdiff__headline-label {
+    color: #374151;
+}
+
+/* The same type as the tiles beside it, down to the line height: this number leads the row
+   by standing first and by having the rule to itself, not by being drawn bigger. Any
+   difference here also drops its label off the line the other four labels sit on. */
 .sly-vdiff__headline-value {
     display: block;
-    font-size: 26px;
+    font-size: 20px;
     font-weight: 600;
-    line-height: 1.15;
+    line-height: 1.2;
     font-variant-numeric: tabular-nums;
 }
 
 .sly-vdiff__headline-label {
     display: block;
-    font-size: 12px;
+    font-size: 11px;
+    line-height: 1.5;
     color: #6b7280;
-    margin-top: 2px;
+    margin-top: 3px;
 }
 
 /* The breakdown: one tile per outcome, separated by rules rather than by boxes, so the row
@@ -174,6 +188,7 @@
    warning, and none of these outcomes is one. */
 .sly-vdiff__total-label {
     font-size: 11px;
+    line-height: 1.5;
     color: #6b7280;
     margin-top: 3px;
     display: flex;
