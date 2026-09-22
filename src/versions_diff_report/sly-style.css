@@ -118,9 +118,9 @@
 .sly-vdiff__headline {
     flex: none;
     align-self: stretch;
-    padding: 16px 20px 16px 16px;
-    margin: -16px 20px -16px -16px;
-    background: #f9fafb;
+    padding: 16px 18px 16px 16px;
+    margin: -16px 16px -16px -16px;
+    background: #eef1f6;
     border-right: 1px solid #e5e7eb;
     border-radius: 7px 0 0 7px;
 }
@@ -166,10 +166,10 @@
 }
 
 .sly-vdiff__total {
-    padding: 0 20px;
+    padding: 0 14px;
     border-left: 1px solid #f0f1f3;
-    flex: 1 1 110px;
-    min-width: 110px;
+    flex: 1 1 96px;
+    min-width: 96px;
 }
 
 .sly-vdiff__total:first-child {
@@ -211,6 +211,19 @@
 .sly-vdiff__total--renamed .sly-vdiff__total-label::before,
 .sly-vdiff__total--moved .sly-vdiff__total-label::before,
 .sly-vdiff__total--contentChanged .sly-vdiff__total-label::before { background: #f59e0b; }
+
+/* Too narrow for the six of them beside it: the lead cell becomes the band across the top
+   of the card rather than a box in its corner. */
+@media (max-width: 900px) {
+    .sly-vdiff__headline {
+        flex: 1 1 100%;
+        margin: -16px -16px 10px;
+        padding: 14px 16px;
+        border-right: 0;
+        border-bottom: 1px solid #e5e7eb;
+        border-radius: 7px 7px 0 0;
+    }
+}
 
 /* Said once, in the card it qualifies: the annotations of these two versions were not
    compared, so every count on the page is about items only. */
@@ -266,10 +279,15 @@
    the product draws for its own breakdowns. */
 /* The three number columns are fixed rather than sized to their contents: a column that
    happens to be empty would otherwise collapse, and the numbers of one row would not line
-   up with the numbers of the next. */
+   up with the numbers of the next.
+
+   Five rows tall whether it has five rows or one, so the cards of a row stand level and the
+   page does not change shape with the project. */
 .sly-vdiff__list {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 54px 54px 54px;
+    align-content: start;
+    min-height: 170px;
 }
 
 .sly-vdiff__list--defs {
@@ -282,19 +300,15 @@
 .sly-vdiff__cell {
     display: flex;
     align-items: center;
+    min-height: 34px;
     padding: 7px 0;
     border-top: 1px solid #f0f1f3;
     min-width: 0;
 }
 
-.sly-vdiff__list > .sly-vdiff__cell:nth-child(-n + 4) {
-    border-top: 0;
-    padding-top: 0;
-}
-
+.sly-vdiff__list > .sly-vdiff__cell:nth-child(-n + 4),
 .sly-vdiff__list--defs > .sly-vdiff__cell:nth-child(-n + 3) {
     border-top: 0;
-    padding-top: 0;
 }
 
 .sly-vdiff__cell--name {
@@ -307,6 +321,14 @@
 
 .sly-vdiff__list--defs .sly-vdiff__cell {
     padding-right: 12px;
+}
+
+.sly-vdiff__list--defs .sly-vdiff__cell:last-child {
+    display: block;
+    line-height: 34px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .sly-vdiff__list--defs .sly-vdiff__cell:last-child {
@@ -365,9 +387,23 @@
     display: flex;
 }
 
+/* Kept even when there is nothing more to show: an empty line here is what makes a card of
+   three rows stand as tall as a card of forty. */
+.sly-vdiff__more-row {
+    display: flex;
+    align-items: center;
+    min-height: 30px;
+    margin-top: 8px;
+    border-top: 1px solid #f0f1f3;
+}
+
+/* Holding the height is the whole job when there is nothing more to show; a rule under
+   nothing reads as a row that failed to draw. */
+.sly-vdiff__more-row:empty {
+    border-top: 0;
+}
+
 .sly-vdiff__more {
-    display: inline-block;
-    margin-top: 10px;
     font-size: 12px;
     color: #2563eb;
     cursor: pointer;
@@ -377,13 +413,95 @@
     text-decoration: underline;
 }
 
-.sly-vdiff__more--close,
-.sly-vdiff__more-toggle:checked ~ .sly-vdiff__more--open {
+/* ---------------------------------------------------------------------------------- */
+/* The dialog                                                                           */
+/* ---------------------------------------------------------------------------------- */
+
+.sly-vdiff__modal-toggle {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.sly-vdiff__modal {
     display: none;
 }
 
-.sly-vdiff__more-toggle:checked ~ .sly-vdiff__more--close {
-    display: inline-block;
+.sly-vdiff__modal-toggle:checked ~ .sly-vdiff__modal {
+    display: block;
+}
+
+.sly-vdiff__modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(17, 24, 39, 0.35);
+    z-index: 1000;
+    cursor: pointer;
+}
+
+/* Centred without flex on the backdrop, so the backdrop stays one flat surface to click. */
+.sly-vdiff__dialog {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    width: min(560px, calc(100vw - 32px));
+    max-height: min(72vh, 640px);
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 12px 32px rgba(16, 24, 40, 0.18);
+    overflow: hidden;
+}
+
+.sly-vdiff__dialog-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 14px 16px;
+    border-bottom: 1px solid #f0f1f3;
+}
+
+.sly-vdiff__dialog-title {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.sly-vdiff__dialog-count {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.sly-vdiff__dialog-close {
+    margin-left: auto;
+    align-self: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.sly-vdiff__dialog-close:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+/* The list is what scrolls, not the page behind it. */
+.sly-vdiff__dialog-body {
+    padding: 4px 16px 16px;
+    overflow-y: auto;
+}
+
+/* Inside the dialog the list is as long as it is: the five-row floor belongs to the card. */
+.sly-vdiff__dialog-body .sly-vdiff__list {
+    min-height: 0;
 }
 
 /* ---------------------------------------------------------------------------------- */

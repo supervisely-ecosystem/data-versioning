@@ -63,10 +63,11 @@ from versions_diff import (
 # above it still describe the whole diff.
 ITEM_TREE_LIMIT = 500
 
-# Rows in the overview's class and tag lists. Ten are drawn, the rest open on a click -
-# the list is meant to be taken in at a glance, not to push the tree off the screen. The
-# hard limit is what the page is willing to hold at all; past it the rest is in diff.json.
-OVERVIEW_VISIBLE_ROWS = 10
+# Rows in the overview's class and tag lists. Five are drawn and the rest open in a dialog,
+# so every one of these cards is the same height whatever the project has in it - a list is
+# meant to be taken in at a glance, not to push the tree off the screen. The hard limit is
+# what the page is willing to hold at all; past it the rest is in diff.json.
+OVERVIEW_VISIBLE_ROWS = 5
 OVERVIEW_ROW_LIMIT = 100
 
 # What a definition row says happened to it, in the order the lists are built.

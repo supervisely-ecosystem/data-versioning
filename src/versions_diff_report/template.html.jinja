@@ -44,62 +44,104 @@
     {% endfor %}
 {% endmacro %}
 
-{#- One list. Four columns sized to their contents: the name, then added, removed and
-    changed, each left-aligned so the three read down the page as columns without a rule
-    between them. A name too long for its column is cut with an ellipsis and kept whole in
-    the title, which the browser shows on hover without leaving the window.
-
-    Ten rows are drawn and the rest wait behind the toggle - a checkbox and a label,
-    because no script of ours runs on this page. -#}
-{% macro overview(rows, hidden, omitted, id, noun) %}
-    <input type="checkbox" id="{{ id }}" class="sly-vdiff__more-toggle">
-    <div class="sly-vdiff__list">
-        {% for row in rows %}
-        {% set extra = " is-extra" if row.extra else "" %}
+{#- One row of the class and tag overview, drawn the same in the card and in the dialog. -#}
+{% macro overview_row(row) %}
         {% set muted = " is-muted" if row.muted else "" %}
-        <div class="sly-vdiff__cell sly-vdiff__cell--name{{ extra }}{{ muted }}">
+        <div class="sly-vdiff__cell sly-vdiff__cell--name{{ muted }}">
             <i class="{{ row.icon }} sly-vdiff__icon" style="color: {{ row.colour or '#b3c2cf' }}"></i>
             <span class="sly-vdiff__row-name" title="{{ row.name }}">{{ row.name }}</span>
             {% if row.state %}<span class="sly-vdiff__chip">{{ row.state }}</span>{% endif %}
         </div>
-        <div class="sly-vdiff__cell sly-vdiff__num is-add{{ extra }}{{ muted }}">{% if row.added %}+{{ row.added }}{% endif %}</div>
-        <div class="sly-vdiff__cell sly-vdiff__num is-del{{ extra }}{{ muted }}">{% if row.removed %}−{{ row.removed }}{% endif %}</div>
-        <div class="sly-vdiff__cell sly-vdiff__num is-mod{{ extra }}{{ muted }}">{% if row.changed %}<i class="{{ modified_icon }}"></i>{{ row.changed }}{% endif %}</div>
-        {% endfor %}
+        <div class="sly-vdiff__cell sly-vdiff__num is-add{{ muted }}">{% if row.added %}+{{ row.added }}{% endif %}</div>
+        <div class="sly-vdiff__cell sly-vdiff__num is-del{{ muted }}">{% if row.removed %}−{{ row.removed }}{% endif %}</div>
+        <div class="sly-vdiff__cell sly-vdiff__num is-mod{{ muted }}">{% if row.changed %}<i class="{{ modified_icon }}"></i>{{ row.changed }}{% endif %}</div>
+{% endmacro %}
+
+{#- One row of a definitions list. -#}
+{% macro definition_row(row) %}
+        <div class="sly-vdiff__cell sly-vdiff__cell--name">
+            <i class="{{ row.icon }} sly-vdiff__icon" style="color: {{ row.colour or '#b3c2cf' }}"></i>
+            <span class="sly-vdiff__row-name" title="{{ row.name }}">{{ row.name }}</span>
+        </div>
+        <div class="sly-vdiff__cell">
+            <span class="sly-vdiff__chip sly-vdiff__chip--{{ row.action }}">{{ row.action }}</span>
+        </div>
+        {#- One line whatever its length: the whole of it is in the title, which the browser
+            shows on hover without making the row - and the card - taller. -#}
+        <div class="sly-vdiff__cell sly-vdiff__dim" title="{{ row.changes | join('; ') }}">{{ row.changes | join("; ") }}</div>
+{% endmacro %}
+
+{#- The rest of a list, behind a dialog rather than unfolded in place: every one of these
+    cards then holds the same five rows and stands the same height, whatever the project
+    has in it, and a class list of a hundred cannot push the tree off the screen.
+
+    A checkbox and labels, because no script of ours runs on this page: the label opens it,
+    the backdrop and the cross close it, and the dialog itself scrolls. -#}
+{% macro dialog(id, title, count, noun, omitted, body) %}
+    <input type="checkbox" id="{{ id }}" class="sly-vdiff__modal-toggle">
+    <div class="sly-vdiff__more-row">
+        <label class="sly-vdiff__more" for="{{ id }}">Show all {{ count }} {{ noun }}</label>
+    </div>
+    <div class="sly-vdiff__modal">
+        <label class="sly-vdiff__modal-backdrop" for="{{ id }}"></label>
+        <div class="sly-vdiff__dialog">
+            <div class="sly-vdiff__dialog-head">
+                <span class="sly-vdiff__dialog-title">{{ title }}</span>
+                <span class="sly-vdiff__dialog-count">{{ count }} {{ noun }}</span>
+                <label class="sly-vdiff__dialog-close" for="{{ id }}" title="Close">✕</label>
+            </div>
+            <div class="sly-vdiff__dialog-body">
+                {{ body }}
+                {% if omitted %}
+                <p class="sly-vdiff__dim">and {{ omitted }} more {{ noun }} not drawn here</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endmacro %}
+
+{#- One list. Four columns sized to their contents: the name, then added, removed and
+    changed, each aligned so the three read down the page as columns without a rule between
+    them. A name too long for its column is cut with an ellipsis and kept whole in the
+    title, which the browser shows on hover without leaving the window. -#}
+{% macro overview(rows, hidden, omitted, id, noun) %}
+    <div class="sly-vdiff__list">
+        {% for row in rows %}{% if not row.extra %}{{ overview_row(row) }}{% endif %}{% endfor %}
     </div>
     {% if hidden %}
-    <label class="sly-vdiff__more sly-vdiff__more--open" for="{{ id }}">and {{ hidden }} more {{ noun }}</label>
-    <label class="sly-vdiff__more sly-vdiff__more--close" for="{{ id }}">show fewer {{ noun }}</label>
-    {% endif %}
+    {% set full %}
+    <div class="sly-vdiff__list">
+        {% for row in rows %}{{ overview_row(row) }}{% endfor %}
+    </div>
+    {% endset %}
+    {{ dialog(id, noun | capitalize, rows | length, noun, omitted, full) }}
+    {% else %}
+    <div class="sly-vdiff__more-row"></div>
     {% if omitted %}
     <p class="sly-vdiff__dim">and {{ omitted }} more {{ noun }} not drawn here</p>
+    {% endif %}
     {% endif %}
 {% endmacro %}
 
 {#- One definitions list: a class or a tag, what happened to it, and - when it was
     rewritten rather than added or removed - what changed in it. Same shape as the overview
-    above, down to the ten rows and the toggle, because it is read the same way. -#}
+    above, down to the five rows and the dialog, because it is read the same way. -#}
 {% macro definitions(entry, id, noun) %}
-    <input type="checkbox" id="{{ id }}" class="sly-vdiff__more-toggle">
     <div class="sly-vdiff__list sly-vdiff__list--defs">
-        {% for row in entry.shown %}
-        {% set extra = " is-extra" if row.extra else "" %}
-        <div class="sly-vdiff__cell sly-vdiff__cell--name{{ extra }}">
-            <i class="{{ row.icon }} sly-vdiff__icon" style="color: {{ row.colour or '#b3c2cf' }}"></i>
-            <span class="sly-vdiff__row-name" title="{{ row.name }}">{{ row.name }}</span>
-        </div>
-        <div class="sly-vdiff__cell{{ extra }}">
-            <span class="sly-vdiff__chip sly-vdiff__chip--{{ row.action }}">{{ row.action }}</span>
-        </div>
-        <div class="sly-vdiff__cell sly-vdiff__dim{{ extra }}">{{ row.changes | join("; ") }}</div>
-        {% endfor %}
+        {% for row in entry.shown %}{% if not row.extra %}{{ definition_row(row) }}{% endif %}{% endfor %}
     </div>
     {% if entry.hidden %}
-    <label class="sly-vdiff__more sly-vdiff__more--open" for="{{ id }}">and {{ entry.hidden }} more {{ noun }}</label>
-    <label class="sly-vdiff__more sly-vdiff__more--close" for="{{ id }}">show fewer {{ noun }}</label>
-    {% endif %}
+    {% set full %}
+    <div class="sly-vdiff__list sly-vdiff__list--defs">
+        {% for row in entry.shown %}{{ definition_row(row) }}{% endfor %}
+    </div>
+    {% endset %}
+    {{ dialog(id, noun | capitalize, entry.shown | length, noun, entry.omitted, full) }}
+    {% else %}
+    <div class="sly-vdiff__more-row"></div>
     {% if entry.omitted %}
     <p class="sly-vdiff__dim">and {{ entry.omitted }} more {{ noun }} not drawn here</p>
+    {% endif %}
     {% endif %}
 {% endmacro %}
 

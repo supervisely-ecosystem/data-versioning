@@ -254,9 +254,9 @@ def test_a_class_of_any_shape_still_wears_an_icon(tmp_path):
     assert "zmdi-circle" not in template
 
 
-def test_the_overview_draws_ten_rows_and_folds_the_rest_behind_a_click(tmp_path):
-    """A project's whole class list in front of the tree is a wall. Ten rows, and the rest
-    on a click - a checkbox and a label, because no script of ours runs on this page."""
+def test_the_overview_draws_five_rows_and_puts_the_rest_in_a_dialog(tmp_path):
+    """A project's whole class list in front of the tree is a wall. Five rows, and the rest
+    in a dialog - a checkbox and labels, because no script of ours runs on this page."""
     names = [f"class{index:02d}" for index in range(13)]
     meta = ProjectMeta(
         obj_classes=ObjClassCollection([ObjClass(name, Rectangle) for name in names])
@@ -271,14 +271,15 @@ def test_the_overview_draws_ten_rows_and_folds_the_rest_behind_a_click(tmp_path)
     _, template = report_of(tmp_path, before, after)
     drawn = markup(template)
 
-    # Every class is in the page - three of them folded away, and reachable without a
-    # request, which is the point of drawing them rather than linking to diff.json.
+    # Every class is in the page - the card holds five and the dialog holds them all, and
+    # they are reachable without a request, which is the point of drawing them rather than
+    # linking to diff.json.
     for name in names:
         assert f">{name}</span>" in drawn
-    assert drawn.count('sly-vdiff__cell--name is-extra') == 3
-    assert "and 3 more classes" in drawn
+    assert drawn.count('class="sly-vdiff__cell sly-vdiff__cell--name"') == 5 + len(names)
+    assert "Show all 13 classes" in drawn
     assert 'id="vdiff-more-classes"' in drawn
-    assert "show fewer classes" in drawn
+    assert "sly-vdiff__dialog" in drawn
 
 
 def test_a_class_deleted_between_the_versions_is_marked_in_the_overview(tmp_path):
