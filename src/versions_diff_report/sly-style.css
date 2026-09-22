@@ -789,13 +789,14 @@
     color: #111827;
 }
 
-.sly-vdiff__collapse--open,
-.sly-vdiff__collapse-toggle:checked ~ .sly-vdiff__collapse--close {
-    display: none;
-}
-
-.sly-vdiff__collapse-toggle:checked ~ .sly-vdiff__collapse--open {
-    display: inline-block;
+/* Pressed. A toggle that renamed itself instead would have to promise something: "expand
+   back" is a promise of a state that does not exist the first time the page is opened, when
+   every branch is shut already. */
+.sly-vdiff__collapse-toggle:checked ~ .sly-vdiff__collapse {
+    background: #eef1f6;
+    border-color: #d1d5db;
+    color: #111827;
+    font-weight: 500;
 }
 
 .sly-vdiff__filter:has(.sly-vdiff__collapse-toggle:checked) details[open] > summary ~ * {

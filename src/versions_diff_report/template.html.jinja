@@ -287,11 +287,11 @@
                     {% endfor %}
                 </div>
 
-                {#- Nothing is actually closed: while the box is checked every branch reads as
-                    shut, and unchecking hands each one back the state it had. -#}
+                {#- A toggle, not two actions: pressed, every branch reads as shut; released,
+                    each one is back to its own state. One name either way, because the name
+                    of a toggle is what it does, and the button says whether it is on. -#}
                 <input type="checkbox" id="vdiff-collapse" class="sly-vdiff__collapse-toggle">
-                <label class="sly-vdiff__collapse sly-vdiff__collapse--close" for="vdiff-collapse">Collapse all</label>
-                <label class="sly-vdiff__collapse sly-vdiff__collapse--open" for="vdiff-collapse">Expand back</label>
+                <label class="sly-vdiff__collapse" for="vdiff-collapse">Collapse all</label>
             </div>
 
             <div class="sly-vdiff__tree">
