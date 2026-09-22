@@ -127,20 +127,23 @@
         <p class="sly-vdiff__sub">{{ when.from }} → {{ when.to }}</p>
     </div>
 
-    <div class="sly-vdiff__headline">
-        <span class="sly-vdiff__headline-value">{{ items.changed }}</span>
-        <span class="sly-vdiff__headline-label">of {{ items.total }} items changed</span>
-    </div>
-
-    {#- What those items changed into, which is a breakdown of the line above and sits
-        under it rather than beside it. -#}
-    <div class="sly-vdiff__totals">
-        {% for entry in items.counts %}
-        <div class="sly-vdiff__total sly-vdiff__total--{{ entry.status }}">
-            <div class="sly-vdiff__total-value">{{ entry.count }}</div>
-            <div class="sly-vdiff__total-label">{{ entry.label }}</div>
+    {#- The one number, and what it is made of: the headline on the left of the card, its
+        breakdown to the right of a rule, so the row reads as one measurement taken apart
+        rather than as five unrelated boxes. -#}
+    <div class="sly-vdiff__card sly-vdiff__summary-card">
+        <div class="sly-vdiff__headline">
+            <span class="sly-vdiff__headline-value">{{ items.changed }}</span>
+            <span class="sly-vdiff__headline-label">of {{ items.total }} items changed</span>
         </div>
-        {% endfor %}
+
+        <div class="sly-vdiff__totals">
+            {% for entry in items.counts %}
+            <div class="sly-vdiff__total sly-vdiff__total--{{ entry.status }}">
+                <div class="sly-vdiff__total-value">{{ entry.count }}</div>
+                <div class="sly-vdiff__total-label">{{ entry.label }}</div>
+            </div>
+            {% endfor %}
+        </div>
     </div>
 
     {% if not summary.annotations.comparable %}
@@ -152,20 +155,27 @@
     {% if meta.changed %}
     {#- Two columns, each named outright - the same two the product's own Definitions tab
         has. A heading over the pair only repeated the word both of them already carry. -#}
-    <div class="sly-vdiff__block sly-vdiff__columns">
-        <div class="sly-vdiff__column">
-            <h2>Class definitions</h2>
-            {{ definitions(meta.classes, "vdiff-more-class-defs", "classes") }}
-        </div>
-        <div class="sly-vdiff__column">
-            <h2>Tag definitions</h2>
-            {{ definitions(meta.tag_metas, "vdiff-more-tag-defs", "tags") }}
+    <div class="sly-vdiff__block sly-vdiff__block--meta">
+        <div class="sly-vdiff__columns">
+            <div class="sly-vdiff__column">
+                <h2>Class definitions</h2>
+                <div class="sly-vdiff__card">
+                    {{ definitions(meta.classes, "vdiff-more-class-defs", "classes") }}
+                </div>
+            </div>
+            <div class="sly-vdiff__column">
+                <h2>Tag definitions</h2>
+                <div class="sly-vdiff__card">
+                    {{ definitions(meta.tag_metas, "vdiff-more-tag-defs", "tags") }}
+                </div>
+            </div>
         </div>
     </div>
 
     {% if meta.settings.shown %}
-    <div class="sly-vdiff__block">
+    <div class="sly-vdiff__block sly-vdiff__block--meta">
         <h2>Project settings</h2>
+        <div class="sly-vdiff__card">
         <ul class="sly-vdiff__meta">
             {% for change in meta.settings.shown %}
             <li><span class="sly-vdiff__chip">setting</span> {{ change }}</li>
@@ -174,33 +184,41 @@
             <li class="sly-vdiff__dim">and {{ meta.settings.omitted }} more settings</li>
             {% endif %}
         </ul>
+        </div>
     </div>
     {% endif %}
     {% endif %}
 
     {% if classes or tags %}
-    <div class="sly-vdiff__block sly-vdiff__columns">
-        {% if classes %}
-        <div class="sly-vdiff__column">
-            <h2>{{ counted | capitalize }} by class</h2>
-            {{ overview(classes, classes_hidden, classes_omitted, "vdiff-more-classes", "classes") }}
-        </div>
-        {% endif %}
+    <div class="sly-vdiff__block sly-vdiff__block--counts">
+        <div class="sly-vdiff__columns">
+            {% if classes %}
+            <div class="sly-vdiff__column">
+                <h2>{{ counted | capitalize }} by class</h2>
+                <div class="sly-vdiff__card">
+                    {{ overview(classes, classes_hidden, classes_omitted, "vdiff-more-classes", "classes") }}
+                </div>
+            </div>
+            {% endif %}
 
-        {% if tags %}
-        <div class="sly-vdiff__column">
-            <h2>Tags</h2>
-            {{ overview(tags, tags_hidden, tags_omitted, "vdiff-more-tags", "tags") }}
+            {% if tags %}
+            <div class="sly-vdiff__column">
+                <h2>Tags</h2>
+                <div class="sly-vdiff__card">
+                    {{ overview(tags, tags_hidden, tags_omitted, "vdiff-more-tags", "tags") }}
+                </div>
+            </div>
+            {% endif %}
         </div>
-        {% endif %}
     </div>
     {% endif %}
 
     <div class="sly-vdiff__block sly-vdiff__tree-block">
         <h2>What changed</h2>
 
+        <div class="sly-vdiff__card">
         {% if items.truncated %}
-        <p class="sly-vdiff__dim">
+        <p class="sly-vdiff__dim" style="margin-top: 0">
             Drawing the first {{ items.drawn }} of {{ items.record_count }} changed items; the
             rest is in this report's {{ details_dir }}/items_*.json files.
         </p>
@@ -288,6 +306,7 @@
                 </details>
                 {% endfor %}
             </div>
+        </div>
         </div>
     </div>
     </div>

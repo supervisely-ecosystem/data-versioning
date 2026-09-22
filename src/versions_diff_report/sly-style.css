@@ -1,29 +1,43 @@
-/* Typography follows the panel's own (see panel/src/components/LabelingPerformance): the
-   product font at 14px for anything read, 12px for what supports it, 11px for labels over
-   a list, and 500 as the only weight above regular. Greys are the panel's too - #737884
-   for secondary text, #8e939f for what is there to be quoted rather than read. */
+/* The report's own stylesheet, written to read like the rest of the product: a light page
+   of white cards on a hairline border, one accent dot per section, numbers big and their
+   labels small and grey, tables with a quiet uppercase header.
+
+   Three greys do all the work - #111827 for what is read, #6b7280 for what supports it and
+   #9ca3af for what is there to be quoted rather than read - and one border, #e5e7eb. The
+   four status colours are the only saturation on the page, and they are always a pale fill
+   under a dark text rather than a block of colour.
+
+   Nothing here may rely on script: the tree opens through <details> and the filter is a
+   radio group with sibling selectors, so what looks like a control is a label. */
 .sly-vdiff {
-    font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-    font-size: 14px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto,
+        'Helvetica Neue', Arial, sans-serif;
+    font-size: 13px;
     line-height: 1.5;
-    color: #1f2d3d;
+    color: #111827;
+    -webkit-font-smoothing: antialiased;
+}
+
+.sly-vdiff * {
+    box-sizing: border-box;
+}
+
+/* ---------------------------------------------------------------------------------- */
+/* Page head                                                                            */
+/* ---------------------------------------------------------------------------------- */
+
+.sly-vdiff__head {
+    margin-bottom: 20px;
 }
 
 .sly-vdiff h1 {
     font-size: 20px;
-    font-weight: 500;
-    margin: 0 0 2px;
-}
-
-/* A label over a section, not a heading inside the text: small, spaced and grey, the way
-   the panel labels the parts of a card. */
-.sly-vdiff h2 {
-    font-size: 11px;
-    font-weight: 500;
-    margin: 0 0 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #8e939f;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .sly-vdiff__ver {
@@ -31,149 +45,297 @@
 }
 
 .sly-vdiff__arrow {
-    color: #b3c2cf;
-    margin: 0 4px;
+    color: #9ca3af;
+    font-weight: 400;
 }
 
 .sly-vdiff__sub,
 .sly-vdiff__dim {
-    color: #8e939f;
+    color: #6b7280;
     font-size: 12px;
 }
 
+/* ---------------------------------------------------------------------------------- */
+/* Sections and cards                                                                   */
+/* ---------------------------------------------------------------------------------- */
+
 .sly-vdiff__block {
-    margin-top: 28px;
+    margin-top: 24px;
 }
 
-/* The headline: how much of the project moved at all. Every box below it is a part of
-   this number, so it is not one of the boxes - it is the line they hang under. */
-.sly-vdiff__headline {
+/* The section label: a dot in the section's own colour, then the name. It sits above the
+   card rather than inside it, so a card is only ever the content. */
+.sly-vdiff h2 {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 8px;
     display: flex;
-    align-items: baseline;
-    gap: 6px;
-    margin-top: 18px;
+    align-items: center;
+    gap: 7px;
+}
+
+.sly-vdiff h2::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #3b82f6;
+    flex: none;
+}
+
+.sly-vdiff__block--meta h2::before { background: #f59e0b; }
+.sly-vdiff__block--counts h2::before { background: #10b981; }
+.sly-vdiff__tree-block h2::before { background: #6366f1; }
+
+/* A sub-label inside a card, for the halves of a split one. Quiet, because the card it
+   sits in has already been named. */
+.sly-vdiff h3 {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6b7280;
+    margin: 0 0 10px;
+}
+
+.sly-vdiff__card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+/* ---------------------------------------------------------------------------------- */
+/* The numbers                                                                          */
+/* ---------------------------------------------------------------------------------- */
+
+/* How much of the project moved at all. Every tile beside it is a part of this number, so
+   it is given the left of the card and a rule to separate it from its own breakdown. */
+.sly-vdiff__headline {
+    padding-right: 20px;
+    border-right: 1px solid #e5e7eb;
+    margin-right: 20px;
+    flex: none;
 }
 
 .sly-vdiff__headline-value {
-    font-size: 24px;
-    font-weight: 500;
+    display: block;
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1.15;
     font-variant-numeric: tabular-nums;
 }
 
 .sly-vdiff__headline-label {
-    color: #737884;
+    display: block;
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 2px;
 }
 
-/* The breakdown, indented under the headline so the two read as one statement. */
+/* The breakdown: one tile per outcome, separated by rules rather than by boxes, so the row
+   reads as one measurement taken apart. */
+.sly-vdiff__summary-card {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    row-gap: 16px;
+}
+
 .sly-vdiff__totals {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 8px;
-    margin-left: 2px;
-}
-
-/* One line each: the number and what it counts, side by side. Two stacked lines in a box
-   made the strip taller than everything it introduces. */
-.sly-vdiff__total {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    padding: 4px 10px;
-    border: 1px solid #e2e9ee;
-    border-left-width: 3px;
-    border-radius: 4px;
-    background: #fff;
-}
-
-.sly-vdiff__total-value {
-    font-size: 14px;
-    font-weight: 500;
-    font-variant-numeric: tabular-nums;
-}
-
-.sly-vdiff__total-label {
-    color: #737884;
-    font-size: 12px;
-}
-
-.sly-vdiff__total--added { border-left-color: #13ce66; }
-.sly-vdiff__total--removed { border-left-color: #ff4949; }
-.sly-vdiff__total--annotationChanged { border-left-color: #20a0ff; }
-.sly-vdiff__total--renamed,
-.sly-vdiff__total--moved,
-.sly-vdiff__total--contentChanged { border-left-color: #ff9100; }
-
-.sly-vdiff__notice {
-    margin-top: 16px;
-    padding: 8px 12px;
-    border: 1px solid #e2e9ee;
-    border-radius: 4px;
-    background: #fff;
-    color: #737884;
-}
-
-.sly-vdiff__meta {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.sly-vdiff__meta li {
-    padding: 3px 0;
-}
-
-/* Two columns side by side while there is room, stacked when there is not. */
-.sly-vdiff__columns {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 36px;
-}
-
-.sly-vdiff__column {
-    flex: 1 1 320px;
+    row-gap: 16px;
+    flex: 1 1 auto;
     min-width: 0;
 }
 
-/* Sized to its contents, not to the column: the names column is as wide as the longest
-   name, the counts follow one gap later, and the pair stays together however wide the
-   section is. */
-/* Sized to its contents, not to the column: the names column is as wide as the longest
-   name, and the three counts follow as columns of their own - added, removed, changed,
-   each starting on the same pixel down the list so they read as columns without a rule
-   between them. */
-.sly-vdiff__list {
-    display: inline-grid;
-    grid-template-columns: minmax(0, max-content) repeat(3, max-content);
-    column-gap: 18px;
-    align-items: center;
-    max-width: 100%;
+.sly-vdiff__total {
+    padding: 0 20px;
+    border-left: 1px solid #f0f1f3;
+    flex: 1 1 110px;
+    min-width: 110px;
 }
 
-/* A definitions list: the name, what happened to it, and what changed inside it. The last
-   column takes the rest of the width because it holds a sentence, not a number. */
-.sly-vdiff__list--defs {
-    display: grid;
-    grid-template-columns: minmax(0, max-content) max-content minmax(0, 1fr);
-    column-gap: 12px;
-    width: 100%;
+.sly-vdiff__total:first-child {
+    border-left: 0;
+    padding-left: 0;
 }
 
-/* Left-aligned on purpose: what lines up is the start of each number, which is what makes
-   the three columns visible at all. */
-.sly-vdiff__num {
+.sly-vdiff__total-value {
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.2;
     font-variant-numeric: tabular-nums;
-    font-weight: 500;
-    white-space: nowrap;
 }
 
-.sly-vdiff__num i {
-    margin-right: 2px;
+/* The label carries the colour, not the number: a row of coloured numbers reads as a
+   warning, and none of these outcomes is one. */
+.sly-vdiff__total-label {
+    font-size: 11px;
+    color: #6b7280;
+    margin-top: 3px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.sly-vdiff__total-label::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #d1d5db;
+    flex: none;
+}
+
+.sly-vdiff__total--added .sly-vdiff__total-label::before { background: #10b981; }
+.sly-vdiff__total--removed .sly-vdiff__total-label::before { background: #ef4444; }
+.sly-vdiff__total--annotationChanged .sly-vdiff__total-label::before { background: #3b82f6; }
+.sly-vdiff__total--renamed .sly-vdiff__total-label::before,
+.sly-vdiff__total--moved .sly-vdiff__total-label::before,
+.sly-vdiff__total--contentChanged .sly-vdiff__total-label::before { background: #f59e0b; }
+
+/* Said once, in the card it qualifies: the annotations of these two versions were not
+   compared, so every count on the page is about items only. */
+.sly-vdiff__notice {
+    margin: 14px 0 0;
+    padding: 9px 12px;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 6px;
+    color: #92400e;
     font-size: 12px;
 }
 
-/* Rows past the tenth: drawn, and folded away until the label below is clicked. The
-   checkbox is the whole mechanism - no script runs on this page. */
+.sly-vdiff__meta {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.sly-vdiff__meta li {
+    padding: 7px 0;
+    border-top: 1px solid #f0f1f3;
+}
+
+.sly-vdiff__meta li:first-child {
+    border-top: 0;
+    padding-top: 0;
+}
+
+/* ---------------------------------------------------------------------------------- */
+/* Two cards side by side                                                               */
+/* ---------------------------------------------------------------------------------- */
+
+/* Each half is its own card under its own label, rather than two halves of one: a label
+   always sits above the card it names, wherever it is on the page. */
+.sly-vdiff__columns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+.sly-vdiff__column {
+    flex: 1 1 340px;
+    min-width: 0;
+}
+
+/* ---------------------------------------------------------------------------------- */
+/* Lists, read as tables                                                                */
+/* ---------------------------------------------------------------------------------- */
+
+/* Four columns sized to their contents, with a hairline under every row - the same table
+   the product draws for its own breakdowns. */
+/* The three number columns are fixed rather than sized to their contents: a column that
+   happens to be empty would otherwise collapse, and the numbers of one row would not line
+   up with the numbers of the next. */
+.sly-vdiff__list {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 54px 54px 54px;
+}
+
+.sly-vdiff__list--defs {
+    grid-template-columns: minmax(0, auto) auto minmax(0, 1fr);
+}
+
+/* Every cell fills its row and centres its own content. Centring the cell instead - which
+   `align-items: center` on the grid does - shrinks it to its content, and then the row's
+   hairline is drawn at four different heights and reads as a broken line. */
+.sly-vdiff__cell {
+    display: flex;
+    align-items: center;
+    padding: 7px 0;
+    border-top: 1px solid #f0f1f3;
+    min-width: 0;
+}
+
+.sly-vdiff__list > .sly-vdiff__cell:nth-child(-n + 4) {
+    border-top: 0;
+    padding-top: 0;
+}
+
+.sly-vdiff__list--defs > .sly-vdiff__cell:nth-child(-n + 3) {
+    border-top: 0;
+    padding-top: 0;
+}
+
+.sly-vdiff__cell--name {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding-right: 16px;
+    min-width: 0;
+}
+
+.sly-vdiff__list--defs .sly-vdiff__cell {
+    padding-right: 12px;
+}
+
+.sly-vdiff__list--defs .sly-vdiff__cell:last-child {
+    padding-right: 0;
+}
+
+/* A row lights up as a row, which needs every cell of it: the grid has no row element to
+   hang a hover on. */
+.sly-vdiff__list:hover .sly-vdiff__cell {
+    transition: background-color 0.1s ease;
+}
+
+.sly-vdiff__cell.is-muted {
+    color: #9ca3af;
+}
+
+.sly-vdiff__row-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+/* Numbers align on their own column and never wrap: the three of them are read down the
+   page, not across the row. */
+.sly-vdiff__num {
+    justify-content: flex-end;
+    padding-left: 14px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+}
+
+.sly-vdiff__num i {
+    font-size: 11px;
+    margin-right: 2px;
+}
+
+.is-add { color: #059669; }
+.is-del { color: #dc2626; }
+.is-mod { color: #2563eb; }
+
+/* The rows past the tenth, and the label that reveals them. A checkbox no one sees, because
+   no script of ours runs on this page. */
 .sly-vdiff__more-toggle {
     position: absolute;
     opacity: 0;
@@ -185,30 +347,19 @@
 }
 
 .sly-vdiff__more-toggle:checked ~ .sly-vdiff__list .sly-vdiff__cell.is-extra {
-    display: block;
-}
-
-/* A definitions row's badge cell is a line of its own, and an empty changes cell still has
-   to hold its place in the grid. */
-.sly-vdiff__list--defs .sly-vdiff__cell {
-    align-self: center;
-}
-
-.sly-vdiff__more-toggle:checked ~ .sly-vdiff__list .sly-vdiff__cell--name.is-extra {
     display: flex;
 }
 
 .sly-vdiff__more {
-    display: block;
-    margin-top: 6px;
-    color: #737884;
+    display: inline-block;
+    margin-top: 10px;
     font-size: 12px;
+    color: #2563eb;
     cursor: pointer;
-    user-select: none;
 }
 
 .sly-vdiff__more:hover {
-    color: #20a0ff;
+    text-decoration: underline;
 }
 
 .sly-vdiff__more--close,
@@ -217,61 +368,27 @@
 }
 
 .sly-vdiff__more-toggle:checked ~ .sly-vdiff__more--close {
-    display: block;
-}
-
-.sly-vdiff__cell {
-    padding: 3px 0;
-    min-width: 0;
-}
-
-.sly-vdiff__cell--name {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-/* Only what is gone is greyed out, and by colour rather than opacity: a faded row takes
-   its icon's colour with it, and the class colour is half of what identifies the row. */
-.sly-vdiff__cell.is-muted {
-    color: #8e939f;
-}
-
-.sly-vdiff__row-name {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    /* A name longer than this is cut rather than pushing the counts off the screen; the
-       whole of it is in the title attribute. */
-    max-width: 44ch;
-}
-
-.is-add { color: #0f9d58; }
-.is-del { color: #e53935; }
-.is-mod { color: #1a86d0; }
-
-/* The panel's own icon font, so a class looks here the way it looks everywhere else. */
-.sly-vdiff__icon {
-    font-size: 14px;
-    width: 16px;
-    flex: none;
-    text-align: center;
-    color: #8e939f;
-}
-
-/* Polygon is the one shape the panel draws as an image rather than a glyph
-   (`.icons8-polygon` in panel/src/assets/scss/global.scss), and an image cannot take the
-   class colour. The same artwork as a mask can: the box is painted in `currentColor` and
-   the picture decides which pixels of it show. Written out here rather than borrowed from
-   the panel so the report also renders outside it. */
-.sly-vdiff__icon.icons8-polygon {
     display: inline-block;
-    width: 14px;
+}
+
+/* ---------------------------------------------------------------------------------- */
+/* Icons and chips                                                                      */
+/* ---------------------------------------------------------------------------------- */
+
+.sly-vdiff__icon {
+    flex: none;
+    width: 16px;
+    font-size: 14px;
+    text-align: center;
+    color: #9ca3af;
+}
+
+.sly-vdiff__icon.icons8-polygon,
+.sly-vdiff__icon[class*='icons8-'] {
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
     height: 14px;
-    margin: 0;
-    background: currentColor;
-    -webkit-mask: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGASURBVFhH7ZaxTsMwFEXDgIRYYWNgIgliBP6CHTEgJOKWEbHDX5QVwcofdIcBqWB3Y0N8QQbGSpR3zXVTSimJEzUdciSr0rvxfa+Jn+2goWFh2e21l0OjbiKj7ssMeMCLtvmJ+q1zMRhWMsSLtvmIn47XZGL6y8h/pPCk/f9EJumMJmt1yXBhMDcrIukwPJttrXZCkwwwSX7fN99OVigVBnPhQa8BvCn9jSyarqtaJh0y7A08Mj/VZXg6sVEH7mEZD8EwWKLkj3jAy/kiB5Wf2LbT6tU+qNVn9Hy6R6k08LKe4o0cU9sy1MmFq1Je1S3DlQHPkb/kYvibsNdeF8G2nYgfW/psg1JlwBPeLCJFTkq27a4pYOFdMVw58HZ5kJPhBSig9k8AsDAoShckdwxXxsxFCCbbMHxp7VMqTa42BOMbkXyvx7luRI7xrTjuqyOGvZE/kn8rBpOHkbyuVUqF8TqMAI7OrGr/tvQ6jkHtFxJQ65UM2Las81La0DAfguALNLUw3vkSwXIAAAAASUVORK5CYII=') center / contain no-repeat;
-    mask: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGASURBVFhH7ZaxTsMwFEXDgIRYYWNgIgliBP6CHTEgJOKWEbHDX5QVwcofdIcBqWB3Y0N8QQbGSpR3zXVTSimJEzUdciSr0rvxfa+Jn+2goWFh2e21l0OjbiKj7ssMeMCLtvmJ+q1zMRhWMsSLtvmIn47XZGL6y8h/pPCk/f9EJumMJmt1yXBhMDcrIukwPJttrXZCkwwwSX7fN99OVigVBnPhQa8BvCn9jSyarqtaJh0y7A08Mj/VZXg6sVEH7mEZD8EwWKLkj3jAy/kiB5Wf2LbT6tU+qNVn9Hy6R6k08LKe4o0cU9sy1MmFq1Je1S3DlQHPkb/kYvibsNdeF8G2nYgfW/psg1JlwBPeLCJFTkq27a4pYOFdMVw58HZ5kJPhBSig9k8AsDAoShckdwxXxsxFCCbbMHxp7VMqTa42BOMbkXyvx7luRI7xrTjuqyOGvZE/kn8rBpOHkbyuVUqF8TqMAI7OrGr/tvQ6jkHtFxJQ65UM2Las81La0DAfguALNLUw3vkSwXIAAAAASUVORK5CYII=') center / contain no-repeat;
 }
 
 .sly-vdiff__dot {
@@ -280,32 +397,38 @@
     border-radius: 50%;
     display: inline-block;
     flex: none;
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
 }
 
+/* A pill, never a block of colour: pale fill, dark text, no border. */
 .sly-vdiff__chip {
-    display: inline-block;
-    padding: 0 7px;
-    border-radius: 9px;
-    background: #eef2f6;
-    color: #737884;
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 8px;
+    border-radius: 10px;
+    background: #f3f4f6;
+    color: #4b5563;
     font-size: 11px;
-    line-height: 18px;
+    font-weight: 500;
+    line-height: 17px;
     white-space: nowrap;
 }
 
 .sly-vdiff__chip--add,
-.sly-vdiff__chip--added { background: #e7f6ec; color: #0f9d58; }
+.sly-vdiff__chip--added { background: #ecfdf5; color: #047857; }
 .sly-vdiff__chip--del,
-.sly-vdiff__chip--removed { background: #fdeaea; color: #e53935; }
+.sly-vdiff__chip--removed { background: #fef2f2; color: #b91c1c; }
 .sly-vdiff__chip--annotationChanged,
-.sly-vdiff__chip--modified { background: #e8f1fb; color: #1a86d0; }
+.sly-vdiff__chip--modified { background: #eff6ff; color: #1d4ed8; }
 .sly-vdiff__chip--renamed,
 .sly-vdiff__chip--moved,
-.sly-vdiff__chip--contentChanged { background: #fdf3e4; color: #b06f0a; }
+.sly-vdiff__chip--contentChanged { background: #fffbeb; color: #b45309; }
 
-/* The filter. Radios and labels only: a checked radio hides every item that does not carry
-   the matching status class, which is the whole mechanism. */
+/* ---------------------------------------------------------------------------------- */
+/* The filter                                                                           */
+/* ---------------------------------------------------------------------------------- */
+
+/* A segmented control, the product's own: one grey track, the chosen segment white with a
+   border. The radios are what make it work, so they are hidden rather than removed. */
 .sly-vdiff__filter > input {
     position: absolute;
     opacity: 0;
@@ -314,69 +437,61 @@
 
 .sly-vdiff__filter > label {
     display: inline-block;
-    margin: 0 6px 12px 0;
-    padding: 2px 12px;
+    padding: 4px 12px;
+    margin: 0 4px 12px 0;
+    border-radius: 6px;
+    background: #f3f4f6;
+    border: 1px solid transparent;
+    color: #4b5563;
     font-size: 12px;
-    border: 1px solid #e2e9ee;
-    border-radius: 13px;
     cursor: pointer;
-    color: #737884;
     user-select: none;
 }
 
 .sly-vdiff__filter > label:hover {
-    border-color: #20a0ff;
-    color: #20a0ff;
+    color: #111827;
 }
 
 .sly-vdiff__filter > input:checked + label {
-    background: #20a0ff;
-    border-color: #20a0ff;
-    color: #fff;
+    background: #fff;
+    border-color: #d1d5db;
+    color: #111827;
+    font-weight: 500;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
 }
 
-#vdiff-added:checked ~ .sly-vdiff__tree .sly-vdiff__item:not(.is-added),
-#vdiff-removed:checked ~ .sly-vdiff__tree .sly-vdiff__item:not(.is-removed),
-#vdiff-renamed:checked ~ .sly-vdiff__tree .sly-vdiff__item:not(.is-renamed),
-#vdiff-moved:checked ~ .sly-vdiff__tree .sly-vdiff__item:not(.is-moved),
-#vdiff-contentChanged:checked ~ .sly-vdiff__tree .sly-vdiff__item:not(.is-contentChanged),
-#vdiff-annotationChanged:checked ~ .sly-vdiff__tree .sly-vdiff__item:not(.is-annotationChanged) {
-    display: none;
+/* ---------------------------------------------------------------------------------- */
+/* The tree                                                                             */
+/* ---------------------------------------------------------------------------------- */
+
+.sly-vdiff__tree {
+    border-top: 1px solid #f0f1f3;
+    padding-top: 4px;
 }
 
-/* A dataset with nothing to show under the current filter goes with its items. Asked as
-   "has no item of this status" rather than "has no visible item": CSS cannot see that a
-   rule above hid something, but it can see which classes are in the subtree. */
-#vdiff-added:checked ~ .sly-vdiff__tree .sly-vdiff__ds:not(:has(.is-added)),
-#vdiff-removed:checked ~ .sly-vdiff__tree .sly-vdiff__ds:not(:has(.is-removed)),
-#vdiff-renamed:checked ~ .sly-vdiff__tree .sly-vdiff__ds:not(:has(.is-renamed)),
-#vdiff-moved:checked ~ .sly-vdiff__tree .sly-vdiff__ds:not(:has(.is-moved)),
-#vdiff-contentChanged:checked ~ .sly-vdiff__tree .sly-vdiff__ds:not(:has(.is-contentChanged)),
-#vdiff-annotationChanged:checked ~ .sly-vdiff__tree .sly-vdiff__ds:not(:has(.is-annotationChanged)) {
-    display: none;
-}
-
-/* A flex summary drops the browser's own disclosure triangle, and a row that opens with
-   nothing to say so is a row nobody clicks. This draws one in a box exactly as wide as the
-   icon column that follows, so an open branch's children line up under their parent. */
 .sly-vdiff__tree summary {
     cursor: pointer;
-    padding: 4px 0;
     list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 7px;
 }
 
 .sly-vdiff__tree summary::-webkit-details-marker {
     display: none;
 }
 
+/* The triangle is drawn rather than taken from the font: a font that fails to load must not
+   take the only sign that a row opens. */
 .sly-vdiff__tree summary::before {
-    content: "";
+    content: '';
     flex: none;
-    width: 16px;
-    height: 16px;
-    color: #b3c2cf;
-    background: currentColor;
-    clip-path: polygon(38% 22%, 66% 50%, 38% 78%);
+    width: 0;
+    height: 0;
+    border-left: 4px solid #9ca3af;
+    border-top: 3.5px solid transparent;
+    border-bottom: 3.5px solid transparent;
+    margin-right: 1px;
     transition: transform 0.12s ease;
 }
 
@@ -384,24 +499,39 @@
     transform: rotate(90deg);
 }
 
-/* An item with nothing to open keeps the column, so its name starts where every other
-   item's name does. */
+/* A row that does not open keeps the triangle's width, so every name on the level starts
+   on the same column. */
 .sly-vdiff__item-flat::before {
-    content: "";
+    content: '';
     flex: none;
-    width: 16px;
+    width: 4px;
+    margin-right: 1px;
 }
 
 .sly-vdiff__ds {
-    border-top: 1px solid #e2e9ee;
-    padding: 2px 0;
+    border-bottom: 1px solid #f0f1f3;
+    padding: 4px 0;
+}
+
+.sly-vdiff__ds:last-child {
+    border-bottom: 0;
 }
 
 .sly-vdiff__ds > summary {
+    padding: 6px 0;
     font-weight: 500;
-    display: flex;
-    gap: 8px;
-    align-items: center;
+}
+
+.sly-vdiff__ds-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sly-vdiff__ds-summary {
+    margin-left: auto;
+    padding-left: 16px;
 }
 
 /* The dataset line counts everything that changed in it, which stops being what the tree
@@ -410,41 +540,61 @@
     display: none;
 }
 
+/* The item's own colour, carried on a rule down its left edge: the one place a status is
+   shown as colour alone, and it is never the only sign - the chip beside the name says it
+   in words. */
 .sly-vdiff__item {
     margin-left: 20px;
-    border-left: 2px solid transparent;
-    padding-left: 10px;
+    border-left: 2px solid #f0f1f3;
+    padding-left: 12px;
 }
 
-.sly-vdiff__item.is-added { border-left-color: #a6e7c1; }
-.sly-vdiff__item.is-removed { border-left-color: #f7b9b9; }
-.sly-vdiff__item.is-annotationChanged { border-left-color: #b8dcfa; }
+.sly-vdiff__item.is-added { border-left-color: #6ee7b7; }
+.sly-vdiff__item.is-removed { border-left-color: #fca5a5; }
+.sly-vdiff__item.is-annotationChanged { border-left-color: #93c5fd; }
 .sly-vdiff__item.is-renamed,
 .sly-vdiff__item.is-moved,
-.sly-vdiff__item.is-contentChanged { border-left-color: #f6d79c; }
+.sly-vdiff__item.is-contentChanged { border-left-color: #fcd34d; }
 
 .sly-vdiff__item-flat {
-    padding: 4px 0;
+    padding: 5px 0;
 }
 
-/* The same 6px between an icon and its text as every row below, so the item's name and
-   the names under it start on the same two columns. */
+.sly-vdiff__item-body > summary:hover,
+.sly-vdiff__item-flat:hover,
+.sly-vdiff__ds > summary:hover {
+    background: #f9fafb;
+}
+
+/* The same 7px between an icon and its text as every row below, so the item's name and the
+   names under it start on the same two columns. */
 .sly-vdiff__item-body > summary,
 .sly-vdiff__item-flat {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 7px;
+    padding: 5px 0;
 }
 
 .sly-vdiff__item-name {
     font-weight: 500;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sly-vdiff__counts {
+    margin-left: auto;
+    padding-left: 16px;
+    white-space: nowrap;
 }
 
 /* One step of nesting, and the only place it is spelled out: an icon column is 16px wide
-   with a 6px gap, so a child indented by exactly that sits with its icon under its
+   with a 7px gap, so a child indented by exactly that sits with its icon under its
    parent's text - which is what makes the levels read as levels. */
 .sly-vdiff__node {
-    margin-left: 22px;
+    margin-left: 23px;
     margin-top: 4px;
     margin-bottom: 8px;
 }
@@ -452,13 +602,13 @@
 .sly-vdiff__leaf {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-left: 22px;
-    padding: 1px 0;
+    gap: 7px;
+    margin-left: 23px;
+    padding: 2px 0;
 }
 
 .sly-vdiff__leaf--tag {
-    color: #4a5568;
+    color: #4b5563;
 }
 
 /* A group inside an item: added, removed and changed read as three short lists instead of
@@ -472,38 +622,39 @@
 /* Aligned with the text of the rows it heads, not with their icons: the icon column is a
    column, and a heading is not one of the things in it. */
 .sly-vdiff__group-title {
-    margin-left: 22px;
-    margin-bottom: 2px;
+    margin-left: 23px;
+    margin-bottom: 3px;
     font-size: 11px;
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #8e939f;
+    color: #6b7280;
 }
 
-.sly-vdiff__group--added .sly-vdiff__group-title { color: #0f9d58; }
-.sly-vdiff__group--removed .sly-vdiff__group-title { color: #e53935; }
-.sly-vdiff__group--changed .sly-vdiff__group-title { color: #1a86d0; }
+.sly-vdiff__group--added .sly-vdiff__group-title { color: #059669; }
+.sly-vdiff__group--removed .sly-vdiff__group-title { color: #dc2626; }
+.sly-vdiff__group--changed .sly-vdiff__group-title { color: #2563eb; }
 
 .sly-vdiff__group-count {
-    color: #b3c2cf;
-    margin-left: 2px;
+    color: #9ca3af;
+    margin-left: 3px;
 }
 
 .sly-vdiff__act {
-    font-size: 12px;
+    font-size: 11px;
+    font-weight: 500;
 }
 
-.sly-vdiff__act.is-added { color: #0f9d58; }
-.sly-vdiff__act.is-removed { color: #e53935; }
-.sly-vdiff__act.is-changed { color: #1a86d0; }
+.sly-vdiff__act.is-added { color: #059669; }
+.sly-vdiff__act.is-removed { color: #dc2626; }
+.sly-vdiff__act.is-changed { color: #2563eb; }
 
 /* Last on the line, and grey: worth having when something has to be quoted, never worth
    reading past. */
 .sly-vdiff__id {
     margin-left: auto;
     padding-left: 16px;
-    color: #b3c2cf;
+    color: #9ca3af;
     font-variant-numeric: tabular-nums;
-    font-size: 12px;
+    font-size: 11px;
 }
