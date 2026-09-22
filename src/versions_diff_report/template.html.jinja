@@ -287,11 +287,17 @@
                     {% endfor %}
                 </div>
 
-                {#- A toggle, not two actions: pressed, every branch reads as shut; released,
-                    each one is back to its own state. One name either way, because the name
-                    of a toggle is what it does, and the button says whether it is on. -#}
-                <input type="checkbox" id="vdiff-collapse" class="sly-vdiff__collapse-toggle">
-                <label class="sly-vdiff__collapse" for="vdiff-collapse">Collapse all</label>
+                {#- Three states of the tree, one radio group: each branch on its own (the
+                    state the page opens in), everything open, everything shut. The two
+                    buttons below offer whichever of those the tree is not already in - both,
+                    when some branches are open and some are not. -#}
+                <input type="radio" name="vdiff-tree" id="vdiff-tree-auto" checked>
+                <input type="radio" name="vdiff-tree" id="vdiff-tree-open">
+                <input type="radio" name="vdiff-tree" id="vdiff-tree-shut">
+                <div class="sly-vdiff__tree-actions">
+                    <label class="sly-vdiff__collapse" for="vdiff-tree-open">Expand all</label>
+                    <label class="sly-vdiff__collapse" for="vdiff-tree-shut">Collapse all</label>
+                </div>
             </div>
 
             <div class="sly-vdiff__tree">

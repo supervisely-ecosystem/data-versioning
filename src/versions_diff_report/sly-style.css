@@ -763,16 +763,49 @@
     padding-left: 16px;
 }
 
-/* Collapse all. The checkbox hides what every open branch holds and puts its triangle back,
-   so the tree reads as shut while it is checked; nothing is actually closed, which is what
-   lets the reader have their own open branches back by unchecking it. */
-.sly-vdiff__collapse-toggle {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
+/* Expand all / Collapse all. Nothing is opened or closed: while one of these is chosen the
+   tree is drawn as if it were, which is all CSS can do without a script. The cost is that a
+   single branch cannot be worked while a whole-tree state is chosen - the way back is the
+   other button. */
+.sly-vdiff__filter:has(#vdiff-tree-shut:checked) details[open] > summary ~ * {
+    display: none;
+}
+
+.sly-vdiff__filter:has(#vdiff-tree-shut:checked) details[open] > summary::before {
+    transform: none;
+}
+
+.sly-vdiff__filter:has(#vdiff-tree-open:checked) details:not([open]) > summary ~ * {
+    display: block;
+}
+
+/* The same thing again for the engines that stopped hiding a closed branch with `display`:
+   there the content sits behind `content-visibility` on a pseudo-element, and an author rule
+   on the children reaches nothing. Harmless where the pseudo-element does not exist. */
+.sly-vdiff__filter:has(#vdiff-tree-open:checked) details::details-content {
+    content-visibility: visible;
+}
+
+.sly-vdiff__filter:has(#vdiff-tree-open:checked) details:not([open]) > summary::before {
+    transform: rotate(90deg);
+}
+
+.sly-vdiff__tree-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* A button offers the state the tree is not in. Everything open: only Collapse. Everything
+   shut: only Expand. Some of each: both, because either is a move from here. */
+.sly-vdiff__filter:has(#vdiff-tree-shut:checked) label[for="vdiff-tree-open"],
+.sly-vdiff__filter:has(#vdiff-tree-open:checked) label[for="vdiff-tree-shut"],
+.sly-vdiff__filter:has(#vdiff-tree-auto:checked):has(.sly-vdiff__tree details[open]) label[for="vdiff-tree-shut"],
+.sly-vdiff__filter:has(#vdiff-tree-auto:checked):has(.sly-vdiff__tree details:not([open])) label[for="vdiff-tree-open"] {
+    display: inline-block;
 }
 
 .sly-vdiff__collapse {
+    display: none;
     padding: 4px 10px;
     border: 1px solid #e5e7eb;
     border-radius: 6px;
@@ -789,23 +822,7 @@
     color: #111827;
 }
 
-/* Pressed. A toggle that renamed itself instead would have to promise something: "expand
-   back" is a promise of a state that does not exist the first time the page is opened, when
-   every branch is shut already. */
-.sly-vdiff__collapse-toggle:checked ~ .sly-vdiff__collapse {
-    background: #eef1f6;
-    border-color: #d1d5db;
-    color: #111827;
-    font-weight: 500;
-}
 
-.sly-vdiff__filter:has(.sly-vdiff__collapse-toggle:checked) details[open] > summary ~ * {
-    display: none;
-}
-
-.sly-vdiff__filter:has(.sly-vdiff__collapse-toggle:checked) details[open] > summary::before {
-    transform: none;
-}
 
 /* What the filter actually does: the checked radio takes every item without that status off
    the page. Asked of the block rather than of the input's siblings, so the control can be
