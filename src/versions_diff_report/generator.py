@@ -231,6 +231,44 @@ def _frames(bounds: Any, noun: str = "frame") -> str:
     )
 
 
+def _settings_rows(settings: dict) -> List[dict]:
+    """Project settings as one row per leaf that changed.
+
+    A setting is rarely a scalar - `multiView` is an object with four fields in it - and
+    printing the object on both sides of an arrow makes the reader diff two lines of JSON
+    by eye. So the pair is walked down to the leaves, and only the leaves that differ
+    become rows: `multiView.enabled  off → on`.
+    """
+    rows: List[dict] = []
+
+    def walk(path: str, before: Any, after: Any) -> None:
+        if isinstance(before, dict) and isinstance(after, dict):
+            for key in sorted(set(before) | set(after)):
+                if before.get(key) != after.get(key):
+                    walk(f"{path}.{key}" if path else key, before.get(key), after.get(key))
+            return
+        rows.append({"name": path, "before": _setting_value(before), "after": _setting_value(after)})
+
+    for field, change in settings.items():
+        if isinstance(change, list) and len(change) == 2:
+            walk(field, change[0], change[1])
+        else:
+            rows.append({"name": field, "before": None, "after": _setting_value(change)})
+
+    return rows
+
+
+def _setting_value(value: Any) -> str:
+    """What a settings value reads as. Booleans are switches; nothing at all is a dash."""
+    if value is None or value == "":
+        return "—"
+    if isinstance(value, bool):
+        return "on" if value else "off"
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False, separators=(", ", ": "))
+    return str(value)
+
+
 def _transition(change: Any) -> str:
     """A `[before, after]` pair as `before → after`, and anything else as itself."""
     if isinstance(change, list) and len(change) == 2:
@@ -928,9 +966,7 @@ class VersionsDiffReport(BaseGenerator):
         return {
             "classes": rows(classes, self._shape_icon, self._class_colour),
             "tag_metas": rows(tag_metas, lambda name: TAG_ICON, self._tag_colours.get),
-            "settings": capped(
-                [f"{_text(field)} {_transition(change)}" for field, change in settings.items()]
-            ),
+            "settings": capped(_settings_rows(settings)),
             "changed": bool(
                 classes.get("added")
                 or classes.get("removed")

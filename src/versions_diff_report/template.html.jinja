@@ -218,14 +218,21 @@
     <div class="sly-vdiff__block sly-vdiff__block--meta">
         <h2>Project settings</h2>
         <div class="sly-vdiff__card">
-        <ul class="sly-vdiff__meta">
-            {% for change in meta.settings.shown %}
-            <li><span class="sly-vdiff__chip">setting</span> {{ change }}</li>
-            {% endfor %}
+            <div class="sly-vdiff__list sly-vdiff__list--settings">
+                {% for row in meta.settings.shown %}
+                <div class="sly-vdiff__cell sly-vdiff__cell--name">
+                    <span class="sly-vdiff__row-name" title="{{ row.name }}">{{ row.name }}</span>
+                </div>
+                <div class="sly-vdiff__cell sly-vdiff__setting-change">
+                    {% if row.before %}<span class="sly-vdiff__was">{{ row.before }}</span>
+                    <span class="sly-vdiff__arrow">→</span>{% endif %}
+                    <span>{{ row.after }}</span>
+                </div>
+                {% endfor %}
+            </div>
             {% if meta.settings.omitted %}
-            <li class="sly-vdiff__dim">and {{ meta.settings.omitted }} more settings</li>
+            <p class="sly-vdiff__dim">and {{ meta.settings.omitted }} more settings</p>
             {% endif %}
-        </ul>
         </div>
     </div>
     {% endif %}
@@ -260,9 +267,10 @@
 
         <div class="sly-vdiff__card">
         {% if items.truncated %}
-        <p class="sly-vdiff__dim" style="margin-top: 0">
-            Drawing the first {{ items.drawn }} of {{ items.record_count }} changed items; the
-            rest is in this report's {{ details_dir }}/items_*.json files.
+        <p class="sly-vdiff__notice sly-vdiff__notice--quiet">
+            This tree shows the first {{ items.drawn }} changed items of {{ items.record_count }}.
+            The counts above cover all of them; the rest of the list is not drawn here, and is
+            in this report's {{ details_dir }}/items_*.json files.
         </p>
         {% endif %}
 

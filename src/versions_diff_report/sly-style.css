@@ -237,6 +237,15 @@
     font-size: 12px;
 }
 
+/* A note about the page rather than about the data: same shape as the notice above, in
+   grey, because nothing is wrong - the page is just long. */
+.sly-vdiff__notice--quiet {
+    margin: 0 0 12px;
+    background: #f9fafb;
+    border-color: #e5e7eb;
+    color: #4b5563;
+}
+
 .sly-vdiff__meta {
     margin: 0;
     padding: 0;
@@ -315,7 +324,7 @@
 /* `--defs` carries both class names, so the four-column rule has to say it does not mean
    this list: on a three-column grid it reaches into the second row and takes the line off
    the top of it. */
-.sly-vdiff__list:not(.sly-vdiff__list--defs) > .sly-vdiff__cell:nth-child(-n + 4),
+.sly-vdiff__list:not(.sly-vdiff__list--defs):not(.sly-vdiff__list--settings) > .sly-vdiff__cell:nth-child(-n + 4),
 .sly-vdiff__list--defs > .sly-vdiff__cell:nth-child(-n + 3) {
     border-top: 0;
 }
@@ -330,6 +339,28 @@
 
 .sly-vdiff__list--defs .sly-vdiff__cell {
     padding-right: 12px;
+}
+
+/* Settings are two columns: what it is called, and what it went from and to. The list has
+   no five-row floor - a project rarely has more than a couple of settings, and an empty
+   half-card under two rows says nothing. */
+.sly-vdiff__list--settings {
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+    min-height: 0;
+}
+
+.sly-vdiff__list--settings > .sly-vdiff__cell:nth-child(-n + 2) {
+    border-top: 0;
+}
+
+.sly-vdiff__setting-change {
+    gap: 7px;
+    padding-left: 24px;
+}
+
+.sly-vdiff__was {
+    color: #9ca3af;
+    text-decoration: line-through;
 }
 
 /* Every third cell is the changes column - `:last-child` is the last cell of the grid, not

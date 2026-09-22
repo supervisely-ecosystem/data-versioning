@@ -208,7 +208,7 @@ def test_a_dataset_says_how_many_of_its_items_are_not_drawn(tmp_path):
         generator.ITEM_TREE_LIMIT = original
 
     assert "and 2 more changed items in this dataset" in capped
-    assert "Drawing the first 2 of 4 changed items" in capped
+    assert "This tree shows the first 2 changed items of 4" in capped
 
 
 def test_the_overview_carries_class_colours_from_the_meta(tmp_path):
