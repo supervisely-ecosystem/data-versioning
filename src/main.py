@@ -3,11 +3,15 @@ from supervisely import logger
 from supervisely.api.app_api import WorkflowMeta, WorkflowSettings
 from supervisely.tiny_timer import TinyTimer
 
+import diff_task
 import globals as g
 
 
 def main():
     project_info = g.api.project.get_info_by_id(g.PROJECT_ID)
+    if g.action == g.ActionType.DIFF:
+        compare_versions(project_info)
+        return
     if g.action == g.ActionType.CREATE:
         g.api.app.workflow.add_input_project(project_info, task_id=g.TASK_ID, meta=g.create_meta)
     else:
@@ -169,6 +173,58 @@ def main():
             g.api.project.remove_permanently(project_to_del_info.id)
     diff = timer.get_sec()
     logger.debug(f"Project version {g.action} took {diff:.2f} sec")
+
+
+def compare_versions(project_info):
+    """Compare two versions of a project and publish the report to Team Files.
+
+    The task itself carries the state: the panel finds this run through the task id
+    recorded in the pair's `status.json`, so nothing here has to report to a registry.
+    """
+    logger.info(
+        f"Comparing versions {g.version_id_from} and {g.version_id_to} "
+        f"of project: {project_info.name}"
+    )
+    timer = TinyTimer()
+    try:
+        status = diff_task.run(
+            g.api,
+            project_info.id,
+            g.version_id_from,
+            g.version_id_to,
+            task_id=g.TASK_ID,
+        )
+    except diff_task.DiffAlreadyRunning as busy:
+        g.api.app.set_output_error(
+            g.TASK_ID,
+            "These versions are already being compared",
+            description=str(busy),
+        )
+        return
+    except Exception as error:
+        g.api.app.set_output_error(
+            g.TASK_ID,
+            "Comparison failed",
+            description=f"{error.__class__.__name__}: {error}",
+            show_logs=True,
+        )
+        raise
+
+    pair = f"versions {status['versionIdFrom']} and {status['versionIdTo']}"
+    if status["status"] == diff_task.STATUS_UNSUPPORTED:
+        g.api.app.set_output_error(
+            g.TASK_ID,
+            "These versions cannot be compared",
+            description=status["message"],
+        )
+        return
+    g.api.app.set_output_text(
+        g.TASK_ID,
+        f"Comparison of {pair} is ready",
+        description=f"Project ID: {project_info.id}",
+        zmdi_icon="zmdi-swap",
+    )
+    logger.debug(f"Project versions comparison took {timer.get_sec():.2f} sec")
 
 
 if __name__ == "__main__":

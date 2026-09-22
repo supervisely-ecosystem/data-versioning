@@ -1,0 +1,294 @@
+{# `under` is the action of the heading this row sits below, when there is one. A row whose
+   own action is the same thing the heading just said does not repeat it; a tag added to a
+   figure that was modified still does. A row with no action of its own says nothing: it is
+   in the tree because of what hangs off it, and the heading above has already said so. #}
+{% macro entry(node, under) %}
+    {% if node.kind == "tag" %}
+    <div class="sly-vdiff__leaf sly-vdiff__leaf--tag">
+        <i class="{{ node.icon }} sly-vdiff__icon" style="color: {{ node.colour or '#b3c2cf' }}"></i>
+        <span>{{ node.name }}{% if node.value %}:{% endif %}</span>
+        {% if node.value %}<span>{{ node.value }}</span>{% endif %}
+        {#- Where the tag applies is context for what it says, so it is a shade lighter. -#}
+        {% if node.frames %}<span class="sly-vdiff__dim">{{ node.frames }}</span>{% endif %}
+        {% if node.action and node.action_key != under %}<span class="sly-vdiff__act is-{{ node.action_key }}">{{ node.action }}</span>{% endif %}
+    </div>
+    {% else %}
+    <div class="sly-vdiff__leaf">
+        <i class="{{ node.icon }} sly-vdiff__icon" style="color: {{ node.colour or '#b3c2cf' }}"></i>
+        {% if node.parts.class %}<span>{{ node.parts.class }}</span>{% endif %}
+        {% if node.parts.detail %}<span class="sly-vdiff__dim">{{ node.parts.detail }}</span>{% endif %}
+        {% if node.parts.action and node.parts.action_key != under %}<span class="sly-vdiff__act is-{{ node.parts.action_key }}">{{ node.parts.action }}</span>{% endif %}
+        <span class="sly-vdiff__id">{{ node.parts.id }}</span>
+    </div>
+    {% if node.groups %}
+    {#- A row with no action of its own passes on the heading it sits under, so what hangs
+        off it does not repeat a word that heading has already said. -#}
+    <div class="sly-vdiff__node">{{ level(node.groups, node.parts.action_key if node.parts.action else under) }}</div>
+    {% endif %}
+    {% endif %}
+{% endmacro %}
+
+{# A level is headed when there is something to tell apart: either it holds more than one
+   kind of change, or its one kind is not the one the level above already announced. Under
+   an object filed in "removed" whose every tag was removed, the word has been said. #}
+{% macro level(groups, inherited) %}
+    {% for group in groups %}
+    {% if groups | length > 1 or group.key != inherited %}
+    <div class="sly-vdiff__group sly-vdiff__group--{{ group.key }}">
+        <div class="sly-vdiff__group-title">{{ group.label }} <span class="sly-vdiff__group-count">{{ group.count }}</span></div>
+        {% for node in group.entries %}{{ entry(node, group.key) }}{% endfor %}
+    </div>
+    {% else %}
+    {% for node in group.entries %}{{ entry(node, inherited) }}{% endfor %}
+    {% endif %}
+    {% endfor %}
+{% endmacro %}
+
+{#- One list. Four columns sized to their contents: the name, then added, removed and
+    changed, each left-aligned so the three read down the page as columns without a rule
+    between them. A name too long for its column is cut with an ellipsis and kept whole in
+    the title, which the browser shows on hover without leaving the window.
+
+    Ten rows are drawn and the rest wait behind the toggle - a checkbox and a label,
+    because no script of ours runs on this page. -#}
+{% macro overview(rows, hidden, omitted, id, noun) %}
+    <input type="checkbox" id="{{ id }}" class="sly-vdiff__more-toggle">
+    <div class="sly-vdiff__list">
+        {% for row in rows %}
+        {% set extra = " is-extra" if row.extra else "" %}
+        {% set muted = " is-muted" if row.muted else "" %}
+        <div class="sly-vdiff__cell sly-vdiff__cell--name{{ extra }}{{ muted }}">
+            <i class="{{ row.icon }} sly-vdiff__icon" style="color: {{ row.colour or '#b3c2cf' }}"></i>
+            <span class="sly-vdiff__row-name" title="{{ row.name }}">{{ row.name }}</span>
+            {% if row.state %}<span class="sly-vdiff__chip">{{ row.state }}</span>{% endif %}
+        </div>
+        <div class="sly-vdiff__cell sly-vdiff__num is-add{{ extra }}{{ muted }}">{% if row.added %}+{{ row.added }}{% endif %}</div>
+        <div class="sly-vdiff__cell sly-vdiff__num is-del{{ extra }}{{ muted }}">{% if row.removed %}−{{ row.removed }}{% endif %}</div>
+        <div class="sly-vdiff__cell sly-vdiff__num is-mod{{ extra }}{{ muted }}">{% if row.changed %}<i class="{{ modified_icon }}"></i>{{ row.changed }}{% endif %}</div>
+        {% endfor %}
+    </div>
+    {% if hidden %}
+    <label class="sly-vdiff__more sly-vdiff__more--open" for="{{ id }}">and {{ hidden }} more {{ noun }}</label>
+    <label class="sly-vdiff__more sly-vdiff__more--close" for="{{ id }}">show fewer {{ noun }}</label>
+    {% endif %}
+    {% if omitted %}
+    <p class="sly-vdiff__dim">and {{ omitted }} more {{ noun }} not drawn here</p>
+    {% endif %}
+{% endmacro %}
+
+{#- One definitions list: a class or a tag, what happened to it, and - when it was
+    rewritten rather than added or removed - what changed in it. Same shape as the overview
+    above, down to the ten rows and the toggle, because it is read the same way. -#}
+{% macro definitions(entry, id, noun) %}
+    <input type="checkbox" id="{{ id }}" class="sly-vdiff__more-toggle">
+    <div class="sly-vdiff__list sly-vdiff__list--defs">
+        {% for row in entry.shown %}
+        {% set extra = " is-extra" if row.extra else "" %}
+        <div class="sly-vdiff__cell sly-vdiff__cell--name{{ extra }}">
+            <i class="{{ row.icon }} sly-vdiff__icon" style="color: {{ row.colour or '#b3c2cf' }}"></i>
+            <span class="sly-vdiff__row-name" title="{{ row.name }}">{{ row.name }}</span>
+        </div>
+        <div class="sly-vdiff__cell{{ extra }}">
+            <span class="sly-vdiff__chip sly-vdiff__chip--{{ row.action }}">{{ row.action }}</span>
+        </div>
+        <div class="sly-vdiff__cell sly-vdiff__dim{{ extra }}">{{ row.changes | join("; ") }}</div>
+        {% endfor %}
+    </div>
+    {% if entry.hidden %}
+    <label class="sly-vdiff__more sly-vdiff__more--open" for="{{ id }}">and {{ entry.hidden }} more {{ noun }}</label>
+    <label class="sly-vdiff__more sly-vdiff__more--close" for="{{ id }}">show fewer {{ noun }}</label>
+    {% endif %}
+    {% if entry.omitted %}
+    <p class="sly-vdiff__dim">and {{ entry.omitted }} more {{ noun }} not drawn here</p>
+    {% endif %}
+{% endmacro %}
+
+{# The rendered version diff.
+
+   `sly-style` is a component of the panel's renderer and has to be compiled, so it sits
+   OUTSIDE the v-pre block - put v-pre on the root and the stylesheet renders as text on the
+   page instead of becoming styles. Everything drawn from data sits inside v-pre, so Vue
+   never tries to resolve a class named `{{ x }}`.
+
+   No script runs here: the tree collapses through <details> and the filter is a radio group
+   plus sibling selectors. #}
+<div class="sly-vdiff">
+    <sly-style>
+    {% include "sly-style.css" %}
+    </sly-style>
+
+    <div v-pre>
+    <div class="sly-vdiff__head">
+        <h1>
+            <span class="sly-vdiff__ver">v{{ summary.from.version }}</span>
+            <span class="sly-vdiff__arrow">→</span>
+            <span class="sly-vdiff__ver">v{{ summary.to.version }}</span>
+        </h1>
+        <p class="sly-vdiff__sub">{{ when.from }} → {{ when.to }}</p>
+    </div>
+
+    <div class="sly-vdiff__headline">
+        <span class="sly-vdiff__headline-value">{{ items.changed }}</span>
+        <span class="sly-vdiff__headline-label">of {{ items.total }} items changed</span>
+    </div>
+
+    {#- What those items changed into, which is a breakdown of the line above and sits
+        under it rather than beside it. -#}
+    <div class="sly-vdiff__totals">
+        {% for entry in items.counts %}
+        <div class="sly-vdiff__total sly-vdiff__total--{{ entry.status }}">
+            <div class="sly-vdiff__total-value">{{ entry.count }}</div>
+            <div class="sly-vdiff__total-label">{{ entry.label }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if not summary.annotations.comparable %}
+    <p class="sly-vdiff__notice">
+        Annotations were not compared. {{ summary.annotations.reason }}
+    </p>
+    {% endif %}
+
+    {% if meta.changed %}
+    {#- Two columns, each named outright - the same two the product's own Definitions tab
+        has. A heading over the pair only repeated the word both of them already carry. -#}
+    <div class="sly-vdiff__block sly-vdiff__columns">
+        <div class="sly-vdiff__column">
+            <h2>Class definitions</h2>
+            {{ definitions(meta.classes, "vdiff-more-class-defs", "classes") }}
+        </div>
+        <div class="sly-vdiff__column">
+            <h2>Tag definitions</h2>
+            {{ definitions(meta.tag_metas, "vdiff-more-tag-defs", "tags") }}
+        </div>
+    </div>
+
+    {% if meta.settings.shown %}
+    <div class="sly-vdiff__block">
+        <h2>Project settings</h2>
+        <ul class="sly-vdiff__meta">
+            {% for change in meta.settings.shown %}
+            <li><span class="sly-vdiff__chip">setting</span> {{ change }}</li>
+            {% endfor %}
+            {% if meta.settings.omitted %}
+            <li class="sly-vdiff__dim">and {{ meta.settings.omitted }} more settings</li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% if classes or tags %}
+    <div class="sly-vdiff__block sly-vdiff__columns">
+        {% if classes %}
+        <div class="sly-vdiff__column">
+            <h2>{{ counted | capitalize }} by class</h2>
+            {{ overview(classes, classes_hidden, classes_omitted, "vdiff-more-classes", "classes") }}
+        </div>
+        {% endif %}
+
+        {% if tags %}
+        <div class="sly-vdiff__column">
+            <h2>Tags</h2>
+            {{ overview(tags, tags_hidden, tags_omitted, "vdiff-more-tags", "tags") }}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="sly-vdiff__block sly-vdiff__tree-block">
+        <h2>What changed</h2>
+
+        {% if items.truncated %}
+        <p class="sly-vdiff__dim">
+            Drawing the first {{ items.drawn }} of {{ items.record_count }} changed items; the
+            rest is in this report's {{ details_dir }}/items_*.json files.
+        </p>
+        {% endif %}
+
+        {# A radio group, because the filter has to work without script: the checked input's
+           sibling selectors below hide every item that does not carry the matching class. #}
+        <div class="sly-vdiff__filter">
+            <input type="radio" name="vdiff-filter" id="vdiff-all" checked>
+            <label for="vdiff-all">all</label>
+            {% for entry in filters %}
+            <input type="radio" name="vdiff-filter" id="vdiff-{{ entry.status }}">
+            <label for="vdiff-{{ entry.status }}">{{ entry.label }}</label>
+            {% endfor %}
+
+            <div class="sly-vdiff__tree">
+                {% for dataset in tree %}
+                <details class="sly-vdiff__ds">
+                    <summary>
+                        <i class="{{ icons.dataset }} sly-vdiff__icon"></i>
+                        <span class="sly-vdiff__ds-name">{{ dataset.path }}</span>
+                        <span class="sly-vdiff__dim sly-vdiff__ds-summary">{{ dataset.summary }}</span>
+                    </summary>
+
+                    {% for item in dataset.entries %}
+                    <div class="sly-vdiff__item {{ item.status_classes }}">
+                        {% if item.expandable %}
+                        <details class="sly-vdiff__item-body">
+                            <summary>
+                                <i class="{{ icons.item }} sly-vdiff__icon"></i>
+                                <span class="sly-vdiff__item-name">{{ item.name }}</span>
+                                {% for status in item.statuses %}
+                                <span class="sly-vdiff__chip sly-vdiff__chip--{{ status.status }}">{{ status.label }}</span>
+                                {% endfor %}
+<span class="sly-vdiff__dim sly-vdiff__counts">
+                                    {%- for part in item.counts %}{% if not loop.first %}, {% endif %}{{ part.label }}
+                                    {%- if part.added %} +{{ part.added }}{% endif %}
+                                    {%- if part.removed %} −{{ part.removed }}{% endif %}
+                                    {%- if part.changed %} <i class="{{ modified_icon }}"></i>{{ part.changed }}{% endif %}
+                                    {%- endfor %}
+                                </span>
+                            </summary>
+
+                            {% if item.previous %}
+                            <div class="sly-vdiff__leaf sly-vdiff__dim">was {{ item.previous }}</div>
+                            {% endif %}
+
+                            {{ level(item.groups, none) }}
+
+                            {% if item.omitted %}
+                            <div class="sly-vdiff__leaf sly-vdiff__dim">
+                                and {{ item.omitted }} more changes on this item
+                            </div>
+                            {% endif %}
+                        </details>
+                        {% else %}
+                        {# Nothing to open: no triangle, and what the item is made of on the
+                           same line instead. #}
+                        <div class="sly-vdiff__item-flat">
+                            <i class="{{ icons.item }} sly-vdiff__icon"></i>
+                            <span class="sly-vdiff__item-name">{{ item.name }}</span>
+                            {% for status in item.statuses %}
+                            <span class="sly-vdiff__chip sly-vdiff__chip--{{ status.status }}">{{ status.label }}</span>
+                            {% endfor %}
+<span class="sly-vdiff__dim sly-vdiff__counts">
+                                    {%- for part in item.counts %}{% if not loop.first %}, {% endif %}{{ part.label }}
+                                    {%- if part.added %} +{{ part.added }}{% endif %}
+                                    {%- if part.removed %} −{{ part.removed }}{% endif %}
+                                    {%- if part.changed %} <i class="{{ modified_icon }}"></i>{{ part.changed }}{% endif %}
+                                    {%- endfor %}
+                                </span>
+                            {% if item.classes %}
+                            <span class="sly-vdiff__dim">· {{ item.classes }}</span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+
+                    {% if dataset.omitted %}
+                    <div class="sly-vdiff__item sly-vdiff__dim">
+                        and {{ dataset.omitted }} more changed items in this dataset
+                    </div>
+                    {% endif %}
+                </details>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    </div>
+</div>
