@@ -23,7 +23,7 @@
   "task_location": "workspace_tasks",
   "headless": true,
   "system": true,
-  "icon": "https://github.com/supervisely-ecosystem/data-versioning/assets/57998637/8a1448cf-733d-4113-9a2c-1a9008e053b5",
-  "poster": "https://github.com/supervisely-ecosystem/data-versioning/assets/57998637/afeaf0eb-94e0-4d32-a103-113a66b674a1",
+  "icon": "https://github.com/supervisely-ecosystem/data-versioning/releases/download/v0.3.8/dv_icon.png",
+  "poster": "https://github.com/supervisely-ecosystem/data-versioning/releases/download/v0.3.8/dv_poster.png",
   "icon_cover": true
 }
