@@ -354,6 +354,20 @@ class VersionsDiffReport(BaseGenerator):
 
     # ------------------------------------------------------------------ writing
 
+    def dump_view_model(self, path: str) -> dict:
+        """Write what the report is made of, as JSON, for a renderer that is not this one.
+
+        The panel draws the report itself now, and this is what it draws: the same model the
+        template here is rendered from - the tree, the counters, the definitions, the labels
+        and the icons - already shaped by the pass that knows the diff. Keeping the shaping
+        here and the drawing there is what stops a fix to either from needing the other, and
+        what stops every published report from carrying a copy of a stylesheet.
+        """
+        model = self.context()
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(model, f, ensure_ascii=False)
+        return model
+
     def generate(self):
         super().generate()
         logger.debug(f"Rendered version diff report in {self.report_dir}")

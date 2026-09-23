@@ -51,6 +51,10 @@ TF_DIFFS_DIR_NAME = "diffs"
 
 STATUS_FILE_NAME = "status.json"
 
+# What the panel draws the report from: the model behind the rendered page, written beside
+# the diff it belongs to.
+REPORT_FILE_NAME = "report.json"
+
 # The rendered report's entry point. Its team-file id is the report id, which is what
 # `instance-widgets.get-template` takes.
 TEMPLATE_FILE_NAME = "template.vue"
@@ -161,7 +165,9 @@ def run(
             )
 
             stage = time.perf_counter()
-            VersionsDiffReport(api, work_dir).generate()
+            report = VersionsDiffReport(api, work_dir)
+            report.dump_view_model(os.path.join(work_dir, REPORT_FILE_NAME))
+            report.generate()
             stats["render_msec"] = msec(stage)
             progress.iter_done_report()
 
@@ -298,7 +304,7 @@ def _publish(
     logger.debug(f"Published {len(uploaded)} report files to {remote_dir}")
 
     ids = {file_info.name: file_info.id for file_info in uploaded}
-    return ids.get(TEMPLATE_FILE_NAME), ids.get(DIFF_FILE_NAME)
+    return ids.get(REPORT_FILE_NAME) or ids.get(TEMPLATE_FILE_NAME), ids.get(DIFF_FILE_NAME)
 
 
 def _write_status(api: sly.Api, team_id: int, remote_dir: str, payload: dict) -> dict:

@@ -172,12 +172,20 @@ def test_the_report_is_published_under_the_version_ids(
         "data/meta_from.json",
         "data/meta_to.json",
         "diff.json",
+        # What the panel draws the report from.
+        "report.json",
         "state.json",
         # The state of the run; the panel reads only this to decide.
         "status.json",
         # The rendered report. Its team-file id is the report id.
         "template.vue",
     ]
+
+    model = json.loads((files.root / REPORT_DIR.lstrip("/") / "report.json").read_text())
+    # The whole page, already shaped: the counters, the two definition lists, the overviews
+    # and the tree. A renderer over this needs to know nothing about snapshots.
+    assert {"summary", "items", "filters", "meta", "tree", "classes", "tags"} <= set(model)
+    assert model["items"]["changed"] == 3
     assert status["reportId"] is not None
     assert status["diffFileId"] is not None
 
