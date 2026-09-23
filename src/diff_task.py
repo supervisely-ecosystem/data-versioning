@@ -15,9 +15,8 @@ The report directory is the product, and its layout is a contract with the panel
 
     /system/versions/<project_id>/diffs/<from_version_id>_<to_version_id>/
         status.json             # the state of the run; the panel reads only this to decide
-        template.vue            # the rendered report; its team-file id IS the report id
-        state.json
-        diff.json               # the artifact; the report is a renderer over it
+        report.json             # the page's model; the panel draws the report from it
+        diff.json               # the artifact; the model is shaped from it
         data/items_0001.json    # detail records, chunked
         data/meta_from.json     # both metas, so the report can be re-rendered later
         data/meta_to.json
@@ -55,9 +54,6 @@ STATUS_FILE_NAME = "status.json"
 # the diff it belongs to.
 REPORT_FILE_NAME = "report.json"
 
-# The rendered report's entry point. Its team-file id is the report id, which is what
-# `instance-widgets.get-template` takes.
-TEMPLATE_FILE_NAME = "template.vue"
 
 STATUS_IN_PROGRESS = "in_progress"
 STATUS_DONE = "done"
@@ -165,9 +161,8 @@ def run(
             )
 
             stage = time.perf_counter()
-            report = VersionsDiffReport(api, work_dir)
+            report = VersionsDiffReport(work_dir)
             report.dump_view_model(os.path.join(work_dir, REPORT_FILE_NAME))
-            report.generate()
             stats["render_msec"] = msec(stage)
             progress.iter_done_report()
 
@@ -291,7 +286,7 @@ def _version_pair(
 def _publish(
     api: sly.Api, team_id: int, local_dir: str, remote_dir: str
 ) -> Tuple[Optional[int], Optional[int]]:
-    """Upload the report directory; return the team-file ids of `template.vue` and `diff.json`."""
+    """Upload the report directory; return the team-file ids of `report.json` and `diff.json`."""
     src_paths, dst_paths = [], []
     for root, _, files in os.walk(local_dir):
         for name in sorted(files):
@@ -304,7 +299,7 @@ def _publish(
     logger.debug(f"Published {len(uploaded)} report files to {remote_dir}")
 
     ids = {file_info.name: file_info.id for file_info in uploaded}
-    return ids.get(REPORT_FILE_NAME) or ids.get(TEMPLATE_FILE_NAME), ids.get(DIFF_FILE_NAME)
+    return ids.get(REPORT_FILE_NAME), ids.get(DIFF_FILE_NAME)
 
 
 def _write_status(api: sly.Api, team_id: int, remote_dir: str, payload: dict) -> dict:

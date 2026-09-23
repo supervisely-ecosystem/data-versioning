@@ -1,53 +1,35 @@
 # coding: utf-8
 
-"""The rendered report over `diff.json` — what a person actually opens.
+"""What the report is made of, shaped from `diff.json` — the model the panel draws.
 
-`diff.json` is the artifact and this is a renderer over it: everything here is derived
+`diff.json` is the artifact and this builds the page over it: everything here is derived
 from the published directory and nothing is recomputed, which is what lets a report be
-re-rendered months later without touching a snapshot.
+drawn months later without touching a snapshot. The result is written beside the diff as
+`report.json`, and the panel renders it.
 
-Built on `sly.template.BaseGenerator`, the same machinery Model Benchmark uses: a Jinja
-template rendered into `template.vue` plus a `state.json`, uploaded to Team Files, and
-read back by the panel through `instance-widgets.get-template`. The report id is the
-team-file id of `template.vue`.
+**Shaping here, drawing there.** This module knows the diff - which levels a modality has,
+what a change is called, which icon and colour stand for a class - and it knows nothing
+about how any of that looks. The panel knows the looks and nothing about diffs. That split
+is why a change to the page no longer means recomputing every report that exists, and why a
+published report is a few kilobytes of data rather than a copy of a stylesheet.
 
 The shape is the nesting the data actually has — **dataset → item → object → figure →
 tag** — because that is how a person looks for a change: which dataset, which item, then
 what inside it. The levels a modality does not have are simply absent: an image figure
 *is* the label, so there is no object above it.
 
-Three decisions worth knowing.
-
-**The tree is static HTML inside `v-pre`.** It is a `<details>` tree, so it collapses
-with no script of ours, and `v-pre` stops Vue compiling the contents — item and class
-names are data, and a name is not a template even when it happens to contain braces.
-
-**No markdown, and no widgets either.** The house reports render markdown through the
-SDK's Jinja extension, which needs the `markdown` package the base image does not ship;
-and the paged table widget resolves its data server-side on every page turn. A report that
-is one static page needs neither: it renders identically inside the panel and outside it,
-which is also what makes it reviewable without an instance.
-
-**Filtering is CSS, not script.** The page is compiled as a Vue template, so a `<script>`
-of ours is not an option. The change-type filter is a radio group plus sibling selectors -
-checked radio hides every item that does not carry the matching class - and the tree
-collapses through `<details>`. No JavaScript runs here at all.
-
-**The tree is capped, twice.** Only the first `ITEM_TREE_LIMIT` changed items are drawn,
-and each one's own branch was already capped when the diff was computed. A 14k-item diff
-must open in a browser; the full detail is in `data/items_*.json`, which is what an
+**The tree is capped, twice.** Only the first `ITEM_TREE_LIMIT` changed items are in the
+model, and each one's own branch was already capped when the diff was computed. A 14k-item
+diff must open in a browser; the full detail is in `data/items_*.json`, which is what an
 automated consumer reads anyway.
 """
 
-import html
 import json
 import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from supervisely import logger
-from supervisely.template.base_generator import BaseGenerator
-from supervisely.template.template_renderer import TemplateRenderer
 
 from versions_diff import (
     DETAILS_DIR_NAME,
@@ -175,18 +157,18 @@ def _row(key: Any, items: List[Any]) -> dict:
 
 
 def _text(value: Any) -> str:
-    """Any value as text safe to put in the page.
+    """Any value as the text of a row.
 
-    Everything drawn in the tree goes through here. The tree lives inside `v-pre`, so
-    Vue never compiles it, and this is what keeps a class named `<b>` from being markup.
+    No escaping: the report is data, and the panel binds every one of these as text. Escaping
+    here would reach the page as the escape itself - a class named `<b>` drawn as `&lt;b&gt;`.
     """
     if value is None:
         return "—"
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, (list, dict)):
-        return html.escape(json.dumps(value, ensure_ascii=False))
-    return html.escape(str(value))
+        return json.dumps(value, ensure_ascii=False)
+    return str(value)
 
 
 MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
@@ -276,19 +258,15 @@ def _transition(change: Any) -> str:
     return _text(change)
 
 
-class VersionsDiffReport(BaseGenerator):
-    """Renders a published diff directory into `template.vue` + `state.json`.
+class VersionsDiffReport:
+    """Builds the report's model out of a published diff directory.
 
-    :param api: Supervisely API client - used by the base class for uploading only.
     :param report_dir: A local directory holding `diff.json` and its `data/` files. The
-        rendered report is written into the same directory, next to what it renders.
+        model is written into the same directory, next to what it describes.
     """
 
-    def __init__(self, api, report_dir: str):
-        super().__init__(api, report_dir)
+    def __init__(self, report_dir: str):
         self.report_dir = report_dir
-        # No markdown extension - see the module docstring.
-        self.template_renderer = TemplateRenderer(jinja_extensions=[])
         self.summary = self._read_json(DIFF_FILE_NAME)
         self.records = self._read_records()
         # Class colours, newer meta first: a class that still exists keeps the colour it has
@@ -367,13 +345,6 @@ class VersionsDiffReport(BaseGenerator):
         with open(path, "w", encoding="utf-8") as f:
             json.dump(model, f, ensure_ascii=False)
         return model
-
-    def generate(self):
-        super().generate()
-        logger.debug(f"Rendered version diff report in {self.report_dir}")
-
-    def state(self) -> dict:
-        return {}
 
     # ------------------------------------------------------------------ widget data
 
@@ -991,9 +962,3 @@ class VersionsDiffReport(BaseGenerator):
                 or settings
             ),
         }
-
-    def _report_url(self, server_address: str, template_id: int) -> str:
-        # The generic instance-widgets viewer, which renders any template by file id.
-        # supervisely/issues#6139 gives versions their own route; until then this is where
-        # a report can be opened.
-        return f"{server_address}/model-benchmark?id={template_id}"

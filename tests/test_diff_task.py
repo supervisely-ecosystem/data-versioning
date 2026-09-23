@@ -174,11 +174,8 @@ def test_the_report_is_published_under_the_version_ids(
         "diff.json",
         # What the panel draws the report from.
         "report.json",
-        "state.json",
         # The state of the run; the panel reads only this to decide.
         "status.json",
-        # The rendered report. Its team-file id is the report id.
-        "template.vue",
     ]
 
     model = json.loads((files.root / REPORT_DIR.lstrip("/") / "report.json").read_text())

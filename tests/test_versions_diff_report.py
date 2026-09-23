@@ -1,11 +1,14 @@
 # coding: utf-8
 
-"""The rendered report — the tree a person reads.
+"""The report's model — the tree a person reads, before anyone draws it.
 
-These assert on the rendered `template.vue`, not on an intermediate context: what makes
-this report readable is the nesting and the escaping, and both only exist after Jinja has
-run. The diff behind it is real (tests/snapshots.py), so a change that stops the engine
+The page is drawn by the panel, so what this module owes it is the shape: the nesting, the
+words, the order, the caps, and the icon and colour of every row. These assert on that
+model. The diff behind it is real (tests/snapshots.py), so a change that stops the engine
 from emitting a level of the tree fails here too.
+
+`drawn()` joins a row's fields the way a row reads - name, value, detail, action - so an
+assertion can still be written as the line a person sees rather than as a field path.
 """
 
 import json
@@ -32,7 +35,7 @@ from versions_diff_report.generator import ITEM_TREE_LIMIT
 
 
 def report_of(tmp_path, builder_from, builder_to, **kwargs):
-    """Compute a diff, publish it into a directory, render it. Returns (dir, template)."""
+    """Compute a diff, publish it into a directory, shape the model. Returns (dir, model)."""
     output_dir = os.path.join(str(tmp_path), "report")
     os.makedirs(output_dir, exist_ok=True)
 
@@ -54,33 +57,205 @@ def report_of(tmp_path, builder_from, builder_to, **kwargs):
     with open(os.path.join(output_dir, DIFF_FILE_NAME), "w", encoding="utf-8") as f:
         json.dump(result.summary, f)
 
-    VersionsDiffReport(api=None, report_dir=output_dir).generate()
-
-    with open(os.path.join(output_dir, "template.vue"), encoding="utf-8") as f:
-        return output_dir, f.read()
+    return output_dir, VersionsDiffReport(output_dir).context()
 
 
-def markup(template: str) -> str:
-    """The page without its stylesheet, for assertions about what is drawn.
+def dump(model) -> str:
+    """The model as JSON, for questions about the shape rather than about the page."""
+    return json.dumps(model, ensure_ascii=False)
 
-    The CSS is inlined in the same file and names every class the markup can use, so a
-    plain substring check against the whole template answers yes to anything.
+
+def nodes(model) -> list:
+    """Every row of every item's tree, in the order they are drawn."""
+    found = []
+
+    def walk(groups):
+        for group in groups:
+            for node in group["entries"]:
+                found.append(node)
+                walk(node.get("groups") or [])
+
+    for dataset in model.get("tree", []):
+        for item in dataset.get("entries", []):
+            walk(item.get("groups") or [])
+
+    return found
+
+
+def groups(model) -> list:
+    """Every group heading in every item: added, removed, changed."""
+    found = []
+
+    def walk(groups_):
+        for group in groups_:
+            found.append(group)
+            for node in group["entries"]:
+                walk(node.get("groups") or [])
+
+    for dataset in model.get("tree", []):
+        for item in dataset.get("entries", []):
+            walk(item.get("groups") or [])
+
+    return found
+
+
+def line_of(node, under=None) -> str:
+    """One row as the panel puts it on one line: icon, name, detail, action, id.
+
+    `under` is the group heading this row sits below. A row whose action is the same word as
+    that heading does not repeat it - VersionsDiffNode.vue decides that with `action_key`,
+    and so does this, or an assertion would read a word the page never draws.
+
+    An id is written `#500` so that an assertion about one cannot match a count or a frame
+    number somewhere else on the page.
     """
-    return template.split("</sly-style>", 1)[-1]
+    if node.get("kind") == "tag":
+        name = f"{node['name']}:" if node.get("value") else node.get("name")
+        action = node.get("action") if node.get("action_key") != under else None
+        pieces = [node.get("icon"), name, node.get("value"), node.get("frames"), action]
+    else:
+        parts = node.get("parts") or {}
+        action = parts.get("action") if parts.get("action_key") != under else None
+        pieces = [
+            node.get("icon"),
+            parts.get("class"),
+            parts.get("detail"),
+            action,
+            f"#{parts['id']}" if parts.get("id") else None,
+        ]
+
+    return " ".join(str(piece) for piece in pieces if piece)
 
 
-def text(template: str) -> str:
-    """The drawn page as a reader sees it, tags gone and spacing collapsed.
+def _counts_line(entry) -> str:
+    return ", ".join(
+        " ".join(
+            piece
+            for piece in [
+                part["label"],
+                f"+{part['added']}" if part.get("added") else None,
+                f"\u2212{part['removed']}" if part.get("removed") else None,
+                f"pencil {part['changed']}" if part.get("changed") else None,
+            ]
+            if piece
+        )
+        for part in entry.get("counts", [])
+    )
 
-    A line of the tree is several spans - the name, the value, the frames a shade lighter -
-    so an assertion about what a row says is an assertion about its text, not its markup.
+
+def drawn(model) -> str:
+    """Everything the report says, in the order a person reads it.
+
+    The overview first, then every dataset with its items and every row under them, each row
+    rendered by `line_of`. Ordering assertions are written against this, so it has to follow
+    the page rather than the dict.
     """
-    return " ".join(re.sub(r"<[^>]+>", " ", markup(template)).split())
+    lines = [json.dumps(model.get("summary"), ensure_ascii=False)]
+    when = model.get("when") or {}
+    lines.append(f"{when.get('from', '')} \u2192 {when.get('to', '')}")
+    lines.append(f"counted {model.get('counted') or ''}")
+
+    items = model.get("items") or {}
+    for status in items.get("counts", []):
+        lines.append(f"{status['label']} {status['count']}")
+    lines.append(f"{items.get('drawn')} of {items.get('total')} items")
+    lines.append(model.get("modified_icon") or "")
+
+    meta = model.get("meta") or {}
+    for key in ("classes", "tag_metas", "settings"):
+        section = meta.get(key) or {}
+        lines.append(f"Definitions {key} {section.get('hidden')} {section.get('omitted')}")
+        for row in section.get("shown") or []:
+            lines.append(json.dumps(row, ensure_ascii=False))
+
+    counted = (model.get("counted") or "").capitalize()
+    for key, heading in (("classes", f"{counted} by class"), ("tags", "Tags")):
+        lines.append(heading)
+        for row in model.get(key) or []:
+            lines.append(_row_line(row))
+        lines.append(f"{key} hidden {model.get(f'{key}_hidden')} omitted {model.get(f'{key}_omitted')}")
+
+    for entry in model.get("filters") or []:
+        lines.append(f"{entry['status']} {entry['label']}")
+
+    icons = model.get("icons") or {}
+    lines.append(f"{icons.get('dataset', '')} {icons.get('item', '')}")
+
+    # Everything above is the overview; the tree starts here, under its own heading.
+    lines.append("What changed")
+    if items.get("truncated"):
+        lines.append(
+            f"This tree shows the first {items['drawn']} changed items of {items['changed']}"
+        )
+
+    def walk(groups_, inherited=None):
+        for group in groups_:
+            # A level is headed when it holds more than one kind of change, or its one kind is
+            # not the one the level above announced. VersionsDiffLevel.vue, same rule.
+            headed = len(groups_) > 1 or group["key"] != inherited
+            under = group["key"] if headed else inherited
+            if headed:
+                lines.append(f"{group['label']} {group['count']}")
+            for node in group["entries"]:
+                lines.append(line_of(node, under))
+                own = (node.get("parts") or {}).get("action_key")
+                walk(node.get("groups") or [], own or under)
+
+    for dataset in model.get("tree", []):
+        lines.append(f"{dataset['path']} {dataset.get('summary') or ''}")
+        for item in dataset.get("entries", []):
+            statuses = " ".join(status["label"] for status in item.get("statuses", []))
+            lines.append(
+                " ".join(
+                    str(piece)
+                    for piece in [
+                        item["name"],
+                        statuses,
+                        _counts_line(item),
+                        item.get("classes"),
+                        item.get("previous"),
+                    ]
+                    if piece
+                )
+            )
+            walk(item.get("groups") or [])
+        if dataset.get("omitted"):
+            lines.append(f"and {dataset['omitted']} more changed items in this dataset")
+
+    if model.get("omitted"):
+        lines.append(f"and {model['omitted']} more")
+
+    return " | ".join(line for line in lines if line)
 
 
-def position(template: str, needle: str) -> int:
-    index = template.find(needle)
-    assert index != -1, f"not in the rendered report: {needle}"
+def _row_line(row) -> str:
+    """One row of the overview tables: a class or a tag with its icon, colour and counts."""
+    pieces = [
+        row.get("icon"),
+        row.get("colour"),
+        row.get("name"),
+        row.get("state"),
+        f"+{row['added']}" if row.get("added") else None,
+        f"\u2212{row['removed']}" if row.get("removed") else None,
+        f"pencil {row['changed']}" if row.get("changed") else None,
+        row.get("total"),
+    ]
+
+    return " ".join(str(piece) for piece in pieces if piece)
+
+
+def row_classes(model) -> list:
+    """The class each row of the tree is named by - the question "what names this row?"."""
+    return [
+        (node.get("parts") or {}).get("class")
+        for node in nodes(model)
+        if node.get("kind") != "tag"
+    ]
+
+
+def position(haystack: str, needle: str) -> int:
+    index = haystack.find(needle)
+    assert index != -1, f"not in the report: {needle}"
     return index
 
 
@@ -101,23 +276,23 @@ def test_the_tree_nests_dataset_item_object_figure_tag(tmp_path):
     after.obj(5, 10, class_name="car").figure(100, 5, 10, frame_index=7, updated_at="t1")
     after.tag(900, OWNER_FIGURE, 100, 10, name="reviewed", value="yes", updated_at="t2")
 
-    _, template = report_of(tmp_path, before, after)
+    _, model = report_of(tmp_path, before, after)
 
-    dataset = position(template, "ds1")
-    item = position(template, "clip.mp4")
+    dataset = position(drawn(model), "ds1")
+    item = position(drawn(model), "clip.mp4")
     # The object row is absent here on purpose: it holds one figure and no tags of its own,
     # so it would only repeat the class name above the figure that carries it. See
     # test_an_object_that_groups_several_figures_says_so for the case where it earns a row.
-    figure = position(template, ">100</span>")
-    tag = position(template, "reviewed:")
+    figure = position(drawn(model), '#100')
+    tag = position(drawn(model), "reviewed:")
     assert dataset < item < figure < tag
 
-    assert "Bounding Box · frame 7" in template
+    assert "Bounding Box · frame 7" in drawn(model)
     # The figure itself did not move, so its row claims nothing: it is in the tree because
     # of the tag under it, and the heading it sits below has already said what that was.
-    assert "tags only" not in template
-    assert "not itself changed" not in template
-    assert "reviewed: no → yes" in text(template)
+    assert "tags only" not in drawn(model)
+    assert "not itself changed" not in drawn(model)
+    assert "reviewed: no → yes" in drawn(model)
 
 
 def test_a_widened_frame_range_reads_as_the_two_ranges(tmp_path):
@@ -133,11 +308,11 @@ def test_a_widened_frame_range_reads_as_the_two_ranges(tmp_path):
         900, OWNER_OBJECT, 5, 10, name="vt-num-frames", frame_range=(61, 158), updated_at="t2"
     )
 
-    _, template = report_of(tmp_path, before, after)
+    _, model = report_of(tmp_path, before, after)
 
     # The name, then where the tag applies - drawn in its own span so it can be lighter.
-    assert "vt-num-frames frames 61–133 → frames 61–158" in text(template)
-    assert '<span class="sly-vdiff__dim">frames 61–133 → frames 61–158</span>' in markup(template)
+    assert "vt-num-frames frames 61–133 → frames 61–158" in drawn(model)
+    assert "frames 61–133 → frames 61–158" in drawn(model)
 
 
 def test_image_figures_hang_off_the_item_with_no_object_level(tmp_path):
@@ -149,18 +324,18 @@ def test_image_figures_hang_off_the_item_with_no_object_level(tmp_path):
         .tag(900, OWNER_ITEM, 100, 100, name="reviewed")
     )
 
-    _, template = report_of(tmp_path, before, after)
+    _, model = report_of(tmp_path, before, after)
 
-    assert ">person</span>" in template
-    assert ">Bounding Box</span>" in template
-    assert ">500</span>" in template
-    assert "reviewed" in template
+    assert "person" in drawn(model)
+    assert "Bounding Box" in drawn(model)
+    assert '#500' in drawn(model)
+    assert "reviewed" in drawn(model)
 
 
-def test_names_are_data_and_the_tree_is_not_compiled(tmp_path):
-    """A class or an item can be called anything, including something that looks like
-    markup or like a Vue interpolation. `v-pre` is what makes that safe, and escaping is
-    what keeps it readable."""
+def test_names_are_carried_verbatim(tmp_path):
+    """A class or an item can be called anything, including something that looks like markup
+    or like a Vue interpolation. The report is data now, so a name travels as the characters
+    it is made of; the panel binds it as text, and nothing on the way compiles it."""
     meta = ProjectMeta(
         obj_classes=ObjClassCollection([ObjClass("<b>{{ hack }}</b>", Rectangle)])
     )
@@ -170,17 +345,13 @@ def test_names_are_data_and_the_tree_is_not_compiled(tmp_path):
     after.image(100, 1, "<script>x</script>", updated_at="t2")
     after.figure(500, 100, class_name="<b>{{ hack }}</b>")
 
-    _, template = report_of(tmp_path, before, after)
+    _, model = report_of(tmp_path, before, after)
 
-    assert "<script>x</script>" not in template
-    assert "&lt;script&gt;x&lt;/script&gt;" in template
-    assert "&lt;b&gt;{{ hack }}&lt;/b&gt;" in template
-    # The content is inside a v-pre block, so the braces above are text rather than an
-    # interpolation Vue would try to resolve...
-    assert "<div v-pre>" in template
-    # ...while the stylesheet is outside it, because sly-style is a component the panel has
-    # to compile. With v-pre on the root it renders as text on the page.
-    assert position(template, "<sly-style>") < position(template, "<div v-pre>")
+    assert "<script>x</script>" in drawn(model)
+    assert "<b>{{ hack }}</b>" in drawn(model)
+    # Nothing was html-escaped on the way: that was the renderer's job, and there is no
+    # renderer between here and the panel any more.
+    assert "&lt;" not in drawn(model)
 
 
 # --------------------------------------------------------------------------------------
@@ -194,8 +365,8 @@ def test_a_dataset_says_how_many_of_its_items_are_not_drawn(tmp_path):
     for image_id in range(100, 104):
         after.image(image_id, 1, f"img{image_id}")
 
-    _, template = report_of(tmp_path, before, after)
-    assert "4 added" in template
+    _, model = report_of(tmp_path, before, after)
+    assert "4 added" in drawn(model)
 
     # The cap is a page-load budget; the counts above the tree still cover the whole diff.
     import versions_diff_report.generator as generator
@@ -203,12 +374,12 @@ def test_a_dataset_says_how_many_of_its_items_are_not_drawn(tmp_path):
     original = generator.ITEM_TREE_LIMIT
     generator.ITEM_TREE_LIMIT = 2
     try:
-        _, capped = report_of(tmp_path, one_dataset(tmp_path, "c"), after)
+        _, capped_model = report_of(tmp_path, one_dataset(tmp_path, "c"), after)
     finally:
         generator.ITEM_TREE_LIMIT = original
 
-    assert "and 2 more changed items in this dataset" in capped
-    assert "This tree shows the first 2 changed items of 4" in capped
+    assert "and 2 more changed items in this dataset" in drawn(capped_model)
+    assert "This tree shows the first 2 changed items of 4" in drawn(capped_model)
 
 
 def test_the_overview_carries_class_colours_from_the_meta(tmp_path):
@@ -223,15 +394,14 @@ def test_the_overview_carries_class_colours_from_the_meta(tmp_path):
         .tag(900, OWNER_ITEM, 100, 100, name="reviewed")
     )
 
-    report_dir, template = report_of(tmp_path, before, after)
+    report_dir, model = report_of(tmp_path, before, after)
 
     # `car` is defined with colour [1, 2, 3] and shape rectangle in the fixture meta, and
     # wears the panel's own rectangle icon in that colour.
-    assert "color: #010203" in template
-    assert "zmdi-crop-din" in template
-    assert position(template, "Figures by class") < position(template, "What changed")
-    assert "reviewed" in template
-    assert os.path.isfile(os.path.join(report_dir, "state.json"))
+    assert '#010203' in drawn(model)
+    assert "zmdi-crop-din" in drawn(model)
+    assert position(drawn(model), "Figures by class") < position(drawn(model), "What changed")
+    assert "reviewed" in drawn(model)
     # No widget data files: the page is self-contained, which is also why it renders the
     # same outside the panel.
     assert not os.path.isfile(os.path.join(report_dir, "data", "classes_table.json"))
@@ -248,27 +418,10 @@ def test_a_class_of_any_shape_still_wears_an_icon(tmp_path):
     after = SnapshotBuilder(tmp_path, "b", meta=meta).dataset(1, "ds1", full_path="ds1")
     after.image(100, 1, "img1", updated_at="t2").figure(500, 100, class_name="thing")
 
-    _, template = report_of(tmp_path, before, after)
+    _, model = report_of(tmp_path, before, after)
 
-    assert "zmdi-grain" in template
-    assert "zmdi-circle" not in template
-
-
-def test_the_stylesheet_carries_no_angle_bracket(tmp_path):
-    """One `<` in the stylesheet takes the whole report's styling with it.
-
-    The file is included into a Vue template, and that parser reads the first angle bracket
-    as the start of a tag: the rest of the stylesheet stops being text, the style element is
-    handed elements instead of CSS, and the page renders as a column of bare text. A comment
-    mentioning a tag by name is enough to do it, which is how it happened.
-    """
-    before = one_dataset(tmp_path, "a").image(100, 1, "img1", updated_at="t1")
-    after = one_dataset(tmp_path, "b").image(100, 1, "img1", updated_at="t2")
-
-    _, template = report_of(tmp_path, before, after)
-    stylesheet = template.split("<sly-style>")[1].split("</sly-style>")[0]
-
-    assert "<" not in stylesheet
+    assert "zmdi-grain" in drawn(model)
+    assert "zmdi-circle" not in drawn(model)
 
 
 def test_the_overview_draws_five_rows_and_puts_the_rest_in_a_dialog(tmp_path):
@@ -285,18 +438,17 @@ def test_the_overview_draws_five_rows_and_puts_the_rest_in_a_dialog(tmp_path):
     for index, name in enumerate(names):
         after.figure(500 + index, 100, class_name=name)
 
-    _, template = report_of(tmp_path, before, after)
-    drawn = markup(template)
+    _, model = report_of(tmp_path, before, after)
+    drawn_text = drawn(model)
 
     # Every class is in the page - the card holds five and the dialog holds them all, and
     # they are reachable without a request, which is the point of drawing them rather than
     # linking to diff.json.
     for name in names:
-        assert f">{name}</span>" in drawn
-    assert drawn.count('class="sly-vdiff__cell sly-vdiff__cell--name"') == 5 + len(names)
-    assert "Show all 13 classes" in drawn
-    assert 'id="vdiff-more-classes"' in drawn
-    assert "sly-vdiff__dialog" in drawn
+        assert name in drawn_text
+    assert len([row for row in model["classes"] if not row["extra"]]) == 5
+    assert len(model["classes"]) == len(names)
+    assert model["classes_hidden"] == len(names) - 5
 
 
 def test_a_class_deleted_between_the_versions_is_marked_in_the_overview(tmp_path):
@@ -313,11 +465,11 @@ def test_a_class_deleted_between_the_versions_is_marked_in_the_overview(tmp_path
     after = SnapshotBuilder(tmp_path, "b").dataset(1, "ds1", full_path="ds1")
     after.image(100, 1, "img1", updated_at="t2")
 
-    _, template = report_of(tmp_path, before, after)
+    _, model = report_of(tmp_path, before, after)
 
-    assert "removed from meta" in template
+    assert "removed from meta" in drawn(model)
     # Keeps the colour it had while it existed, rather than falling back to grey.
-    assert "color: #090909" in template
+    assert '#090909' in drawn(model)
 
 
 def test_the_filter_offers_only_what_the_diff_contains(tmp_path):
@@ -327,11 +479,11 @@ def test_the_filter_offers_only_what_the_diff_contains(tmp_path):
     after = one_dataset(tmp_path, "b").image(100, 1, "img1", updated_at="t1")
     after.image(101, 1, "img2")
 
-    _, template = report_of(tmp_path, before, after)
+    _, model = report_of(tmp_path, before, after)
 
-    assert 'id="vdiff-added"' in template
-    assert 'id="vdiff-removed"' not in template
-    assert "<script" not in template
+    assert [entry["status"] for entry in model["filters"]] == ["added"]
+    assert "removed" not in [entry["status"] for entry in model["filters"]]
+    assert model["filters"]
 
 
 def test_definitions_say_what_happened_to_each_class_and_tag(tmp_path):
@@ -343,18 +495,18 @@ def test_definitions_say_what_happened_to_each_class_and_tag(tmp_path):
     after = SnapshotBuilder(tmp_path, "b", meta=other).dataset(1, "ds1", full_path="ds1")
     after.image(100, 1, "img1")
 
-    _, template = report_of(tmp_path, before, after)
-    drawn = markup(template)
+    _, model = report_of(tmp_path, before, after)
+    drawn_text = drawn(model)
 
-    # The renderer stamps an anchor id onto every heading, so match the text, not the tag.
-    assert ">Class definitions</h2>" in drawn
-    assert ">Tag definitions</h2>" in drawn
-    assert "Project meta" not in drawn
+    # Both lists are there, and each row says what happened to its definition.
+    assert model["meta"]["classes"]["shown"]
+    assert model["meta"]["tag_metas"]["shown"]
+    assert "Project meta" not in drawn(model)
+    by_name = {row["name"]: row for row in model["meta"]["classes"]["shown"]}
     for name, action in (("truck", "added"), ("car", "removed")):
-        row = drawn[position(drawn, f'title="{name}"'):]
-        assert f'sly-vdiff__chip--{action}">{action}</span>' in row[:400]
+        assert by_name[name]["action"] == action
     # The class keeps the icon and the colour it has everywhere else in the product.
-    assert "zmdi-crop-din" in drawn
+    assert "zmdi-crop-din" in drawn_text
     assert ITEM_TREE_LIMIT > 0
 
 
@@ -366,11 +518,11 @@ def test_a_dataset_whose_items_are_all_drawn_does_not_claim_more(tmp_path):
     after = one_dataset(tmp_path, "b").image(100, 1, "img1-renamed", updated_at="t2")
     after.figure(500, 100, updated_at="t2")
 
-    _, template = report_of(tmp_path, before, after)
+    _, model = report_of(tmp_path, before, after)
 
-    assert ">renamed</span>" in template
-    assert ">annotation changed</span>" in template
-    assert "more changed items" not in template
+    assert "renamed" in drawn(model)
+    assert "annotation changed" in drawn(model)
+    assert "more changed items" not in drawn(model)
 
 
 def test_each_version_is_dated_by_its_own_timestamp(tmp_path):
@@ -379,13 +531,13 @@ def test_each_version_is_dated_by_its_own_timestamp(tmp_path):
     before = one_dataset(tmp_path, "a").image(100, 1, "img1")
     after = one_dataset(tmp_path, "b").image(100, 1, "img1")
 
-    _, template = report_of(tmp_path, before, after)
+    _, model = report_of(tmp_path, before, after)
 
-    assert ">v4</span>" in template
-    assert ">v7</span>" in template
+    assert model["summary"]["from"]["version"] == 4
+    assert model["summary"]["to"]["version"] == 7
     # Written the way every other date in the product is, rather than as the ISO string the
     # artifact carries.
-    assert "01 Jan 2026 00:00:00 → 02 Feb 2026 00:00:00" in template
+    assert "01 Jan 2026 00:00:00 → 02 Feb 2026 00:00:00" in drawn(model)
 
 
 def test_an_items_changes_are_grouped_by_what_happened(tmp_path):
@@ -404,14 +556,14 @@ def test_an_items_changes_are_grouped_by_what_happened(tmp_path):
         .figure(502, 100, class_name="person", updated_at="t1")
     )
 
-    _, template = report_of(tmp_path, before, after)
+    _, model = report_of(tmp_path, before, after)
 
-    drawn = markup(template)
-    assert "sly-vdiff__group--added" in drawn
-    assert "sly-vdiff__group--removed" in drawn
-    assert "sly-vdiff__group--changed" in drawn
+    drawn_text = drawn(model)
+    assert "added" in [group["key"] for group in groups(model)]
+    assert "removed" in [group["key"] for group in groups(model)]
+    assert "changed" in [group["key"] for group in groups(model)]
     # The heading carries the action, so the rows under it do not repeat it.
-    assert position(template, "sly-vdiff__group--added") < position(template, ">502</span>")
+    assert position(drawn(model), "added 1") < position(drawn(model), '#502')
 
 
 def test_one_kind_of_change_is_headed_once_instead_of_labelled_on_every_row(tmp_path):
@@ -422,12 +574,14 @@ def test_one_kind_of_change_is_headed_once_instead_of_labelled_on_every_row(tmp_
     for figure_id in (500, 501, 502):
         after.figure(figure_id, 100, class_name="car")
 
-    _, template = report_of(tmp_path, before, after)
-    drawn = markup(template)
+    _, model = report_of(tmp_path, before, after)
+    drawn_text = drawn(model)
 
-    assert '<div class="sly-vdiff__group-title">added' in drawn
-    assert ">500</span>" in drawn
-    assert drawn.count('sly-vdiff__act is-added') == 0
+    assert "added" in [group["key"] for group in groups(model)]
+    assert '#500' in drawn_text
+    # One heading, and the word does not come back on any of the three rows under it.
+    tree = drawn_text[position(drawn_text, "What changed"):]
+    assert tree.count("added") == 1
 
 
 def test_a_box_tracked_across_frames_is_one_line(tmp_path):
@@ -445,17 +599,17 @@ def test_a_box_tracked_across_frames_is_one_line(tmp_path):
     # A gap, so the run stops rather than swallowing everything on the object.
     after.figure(300, 5, 10, frame_index=40, updated_at="t2")
 
-    _, template = report_of(tmp_path, before, after)
-    drawn = markup(template)
+    _, model = report_of(tmp_path, before, after)
+    drawn_text = drawn(model)
 
-    assert "frames 30–34" in drawn
+    assert "frames 30–34" in drawn_text
     # No id on a folded line: there are five, and the range is already how many.
-    assert "×5" not in drawn
+    assert "×5" not in drawn_text
     # The frame on the far side of the gap keeps its own line and its own id.
-    assert "frame 40" in drawn
-    assert ">300</span>" in drawn
+    assert "frame 40" in drawn_text
+    assert '#300' in drawn_text
     # Folding lines does not change what is counted: six figures were added, drawn on two.
-    assert "figures +6" in drawn
+    assert "figures +6" in drawn_text
 
 
 def test_a_long_class_name_is_cut_rather_than_pushing_the_counts_away(tmp_path):
@@ -471,11 +625,11 @@ def test_a_long_class_name_is_cut_rather_than_pushing_the_counts_away(tmp_path):
     after = SnapshotBuilder(tmp_path, "b", meta=wide).dataset(1, "ds1", full_path="ds1")
     after.image(100, 1, "img1", updated_at="t2").figure(500, 100, class_name=long_name)
 
-    _, template = report_of(tmp_path, before, after)
-    drawn = markup(template)
+    _, model = report_of(tmp_path, before, after)
+    drawn_text = drawn(model)
 
-    assert f'title="{long_name}"' in drawn
-    assert "sly-vdiff__list" in drawn
+    assert long_name in drawn_text
+    assert model["classes"]
 
 
 def test_an_object_with_one_figure_is_drawn_as_that_figure(tmp_path):
@@ -489,13 +643,13 @@ def test_an_object_with_one_figure_is_drawn_as_that_figure(tmp_path):
     after.video(10, 1, "clip.mp4", updated_at="t2")
     after.obj(5, 10, class_name="car").figure(100, 5, 10, frame_index=0, updated_at="t2")
 
-    _, template = report_of(tmp_path, before, after)
-    drawn = markup(template)
+    _, model = report_of(tmp_path, before, after)
+    drawn_text = drawn(model)
 
     # One row: the figure, with its geometry and its own id.
-    assert drawn.count('class="sly-vdiff__leaf"') == 1
-    assert "Bounding Box" in drawn
-    assert ">100</span>" in drawn
+    assert len(nodes(model)) == 1
+    assert "Bounding Box" in drawn_text
+    assert '#100' in drawn_text
 
 
 def test_an_object_that_groups_several_figures_says_so(tmp_path):
@@ -509,11 +663,11 @@ def test_an_object_that_groups_several_figures_says_so(tmp_path):
     after.figure(101, 5, 10, frame_index=1, updated_at="t2")
     after.figure(102, 5, 10, frame_index=2, updated_at="t2")
 
-    _, template = report_of(tmp_path, before, after)
-    drawn = markup(template)
+    _, model = report_of(tmp_path, before, after)
+    drawn_text = drawn(model)
 
-    assert "3 figures" in drawn
-    assert ">5</span>" in drawn
+    assert "3 figures" in drawn_text
+    assert '#5' in drawn_text
 
 
 def test_a_volume_diff_is_drawn_the_same_way_but_counts_slices(tmp_path):
@@ -531,20 +685,20 @@ def test_a_volume_diff_is_drawn_the_same_way_but_counts_slices(tmp_path):
     after.figure(101, slice_index=4)
     after.tag(900, object_key="obj-1", name="reviewed")
 
-    _, template = report_of(tmp_path, before, after)
-    drawn = markup(template)
+    _, model = report_of(tmp_path, before, after)
+    drawn_text = drawn(model)
 
     # Dataset, then item, then the object it hangs under - inside the tree, not in the
     # overview above it, where the class names also appear.
-    tree = drawn[position(drawn, "What changed"):]
-    assert position(tree, ">ct</span>") < position(tree, "scan.nrrd") < position(tree, ">car</span>")
+    tree = drawn_text[position(drawn_text, "What changed"):]
+    assert position(tree, "ct") < position(tree, "scan.nrrd") < position(tree, "car")
     # A volume is cut into slices; calling them frames was the video's word, not this one's.
-    assert "slice 4" in drawn
-    assert "frame" not in text(template)
+    assert "slice 4" in drawn_text
+    assert "frame" not in drawn(model)
     # Volumes are counted in objects, like videos and unlike images.
-    assert "Objects by class" in drawn
+    assert "Objects by class" in drawn_text
     # And the item wears the icon of its own modality.
-    assert "zmdi-layers" in drawn
+    assert "zmdi-layers" in drawn_text
 
 
 def test_an_object_whose_only_change_is_a_tag_is_named_by_its_class(tmp_path):
@@ -560,10 +714,10 @@ def test_an_object_whose_only_change_is_a_tag_is_named_by_its_class(tmp_path):
     after.obj(5, 10, class_name="car").figure(100, 5, 10, frame_index=0, updated_at="t1")
     after.tag(900, OWNER_OBJECT, 5, 10, name="reviewed", value="yes", updated_at="t2")
 
-    _, template = report_of(tmp_path, before, after)
+    _, model = report_of(tmp_path, before, after)
 
-    assert '<span class="sly-vdiff__dim">object</span>' not in markup(template)
-    assert position(template, ">car</span>") < position(template, "reviewed:")
+    assert row_classes(model) == ["car"]
+    assert position(drawn(model), "car") < position(drawn(model), "reviewed:")
 
 
 def test_an_object_with_no_figures_at_all_is_named_from_the_objects_table(tmp_path):
@@ -578,10 +732,10 @@ def test_an_object_with_no_figures_at_all_is_named_from_the_objects_table(tmp_pa
     after.obj(5, 10, class_name="car")
     after.tag(900, OWNER_OBJECT, 5, 10, name="reviewed", value="yes", updated_at="t2")
 
-    _, template = report_of(tmp_path, before, after)
+    _, model = report_of(tmp_path, before, after)
 
-    assert position(template, ">car</span>") < position(template, "reviewed:")
-    assert '<span class="sly-vdiff__dim">object</span>' not in markup(template)
+    assert position(drawn(model), "car") < position(drawn(model), "reviewed:")
+    assert row_classes(model) == ["car"]
 
 
 def test_an_object_nothing_can_name_keeps_the_noun(tmp_path):
@@ -597,9 +751,12 @@ def test_an_object_nothing_can_name_keeps_the_noun(tmp_path):
     after.obj(5, 10, class_name=None)
     after.tag(900, OWNER_OBJECT, 5, 10, name="reviewed", value="yes", updated_at="t2")
 
-    _, template = report_of(tmp_path, before, after)
+    _, model = report_of(tmp_path, before, after)
 
-    assert '<span class="sly-vdiff__dim">object</span>' in markup(template)
+    # The noun goes where the class would have been read - on the row's detail, since only a
+    # figure carries a class and this object never had one.
+    assert row_classes(model) == [""]
+    assert "object" in drawn(model)
 
 
 def test_the_item_line_counts_the_way_the_overview_does(tmp_path):
@@ -611,11 +768,11 @@ def test_the_item_line_counts_the_way_the_overview_does(tmp_path):
     after = one_dataset(tmp_path, "b").image(100, 1, "img1.jpg", updated_at="t2")
     after.figure(500, 100, class_name="person", updated_at="t2")
 
-    _, template = report_of(tmp_path, before, after)
-    drawn = markup(template)
+    _, model = report_of(tmp_path, before, after)
+    drawn_text = drawn(model)
 
-    assert "~" not in text(template)
-    assert 'class="zmdi zmdi-edit"' in drawn
+    assert "~" not in drawn(model)
+    assert model["modified_icon"] == "zmdi zmdi-edit"
 
 
 def test_an_untouched_entity_is_filed_under_what_moved_inside_it(tmp_path):
@@ -633,17 +790,17 @@ def test_an_untouched_entity_is_filed_under_what_moved_inside_it(tmp_path):
     after.obj(5, 10, class_name="car").figure(100, 5, 10, frame_index=0, updated_at="t2")
     after.figure(101, 5, 10, frame_index=1, updated_at="t2")
 
-    _, template = report_of(tmp_path, before, after)
-    drawn = markup(template)
+    _, model = report_of(tmp_path, before, after)
+    drawn_text = drawn(model)
 
     # Both figures were modified, so the object is under "modified" rather than in a bucket
     # named after the fact that it is not itself the thing that changed - and its own row
     # says nothing at all, because an object is never the thing that was edited.
-    assert "sly-vdiff__group--changed" in drawn
-    assert "with changes inside" not in drawn
-    assert "with tag changes" not in drawn
-    assert "not itself changed" not in drawn
-    assert "tags only" not in drawn
+    assert "changed" in [group["key"] for group in groups(model)]
+    assert "with changes inside" not in drawn_text
+    assert "with tag changes" not in drawn_text
+    assert "not itself changed" not in drawn_text
+    assert "tags only" not in drawn_text
 
 
 def test_figures_under_an_object_say_only_what_differs(tmp_path):
@@ -659,17 +816,17 @@ def test_figures_under_an_object_say_only_what_differs(tmp_path):
     after.figure(101, 5, 10, frame_index=7, geometry_type="rectangle", updated_at="t2")
     after.figure(102, 5, 10, frame_index=9, geometry_type="bitmap", updated_at="t2")
 
-    _, template = report_of(tmp_path, before, after)
-    drawn = markup(template)
+    _, model = report_of(tmp_path, before, after)
+    drawn_text = drawn(model)
 
     # The object names the class once, and is drawn the way its figures are drawn.
-    assert "zmdi-crop-din" in drawn
-    tree = drawn.split("What changed", 1)[1]
-    assert tree.count(">car</span>") == 1
+    assert "zmdi-crop-din" in drawn_text
+    tree = drawn_text.split("What changed", 1)[1]
+    assert len([node for node in nodes(model) if (node.get("parts") or {}).get("class") == "car"]) == 1
     # The figure that matches the object says only its frame; the one drawn differently
     # keeps its geometry, because that is the thing worth noticing.
-    assert "frame 7" in drawn
-    assert "Mask · frame 9" in drawn
+    assert "frame 7" in drawn_text
+    assert "Mask · frame 9" in drawn_text
 
 
 def test_a_volume_figure_that_sits_on_no_slice_says_its_shape(tmp_path):
@@ -685,11 +842,11 @@ def test_a_volume_figure_that_sits_on_no_slice_says_its_shape(tmp_path):
     after.spatial_figure(200)
     after.tag(900, object_key="obj-1", name="any-oneof", value="high")
 
-    _, template = report_of(tmp_path, before, after)
-    drawn = markup(template)
+    _, model = report_of(tmp_path, before, after)
+    drawn_text = drawn(model)
 
     # The product's own word for the shape, not the vocabulary the annotation is stored in.
-    assert "Mask 3D" in drawn
-    assert "mask_3d" not in drawn
+    assert "Mask 3D" in drawn_text
+    assert "mask_3d" not in drawn_text
     # Nothing to say about slices: the figure is not on one.
-    assert "slice" not in text(template)
+    assert "slice" not in drawn(model)
