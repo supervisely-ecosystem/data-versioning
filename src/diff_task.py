@@ -69,6 +69,8 @@ _LIVE_TASK_STATUSES = frozenset(
         TaskApi.Status.CONSUMED,
         TaskApi.Status.STARTED,
         TaskApi.Status.DEPLOYED,
+        # Still writing until it is gone: a pair is not free while its task shuts down.
+        TaskApi.Status.TERMINATING,
     )
 )
 
@@ -110,6 +112,8 @@ def run(
     reports differently; every other failure is caught, recorded as `failed` in
     `status.json` and re-raised.
     """
+    if version_id_from == version_id_to:
+        raise ValueError(f"Version {version_id_from} cannot be compared with itself.")
     version_from, version_to = _version_pair(
         api, project_id, version_id_from, version_id_to
     )
@@ -173,15 +177,16 @@ def run(
     except DiffUnsupported as refusal:
         # `message` is a reserved LogRecord field, so the refusal goes in as one value.
         logger.info("Version diff refused", extra={**log_meta, "refusal": refusal.detail})
-        return _write_status(
+        return _write_final_status(
             api,
             team_id,
             remote_dir,
             {**status, "status": STATUS_UNSUPPORTED, "finishedAt": _now(), **refusal.detail},
+            log_meta,
         )
     except Exception as error:
         logger.error("Version diff failed", extra=log_meta, exc_info=True)
-        _write_status(
+        _write_final_status(
             api,
             team_id,
             remote_dir,
@@ -191,6 +196,7 @@ def run(
                 "finishedAt": _now(),
                 "message": f"{error.__class__.__name__}: {error}",
             },
+            log_meta,
         )
         raise
 
@@ -209,7 +215,7 @@ def run(
         },
     )
     # Last write, and only now: everything the report needs is already uploaded.
-    return _write_status(
+    return _write_final_status(
         api,
         team_id,
         remote_dir,
@@ -220,6 +226,7 @@ def run(
             "reportId": report_id,
             "diffFileId": diff_file_id,
         },
+        log_meta,
     )
 
 
@@ -300,6 +307,26 @@ def _publish(
 
     ids = {file_info.name: file_info.id for file_info in uploaded}
     return ids.get(REPORT_FILE_NAME), ids.get(DIFF_FILE_NAME)
+
+
+def _write_final_status(
+    api: sly.Api, team_id: int, remote_dir: str, payload: dict, log_meta: dict
+) -> dict:
+    """The closing write, unless another task has taken the pair over meanwhile.
+
+    The liveness check at the start can be passed by two tasks at once, or fail open when
+    the task api does not answer. Whichever started last owns the directory then, and a
+    `done` from the other would vouch for files that are still being overwritten.
+    """
+    current = read_status(api, team_id, remote_dir)
+    owner = (current or {}).get("taskId")
+    if owner is not None and owner != payload.get("taskId"):
+        logger.warning(
+            f"Task {owner} took this pair over; not recording {payload['status']}",
+            extra=log_meta,
+        )
+        return payload
+    return _write_status(api, team_id, remote_dir, payload)
 
 
 def _write_status(api: sly.Api, team_id: int, remote_dir: str, payload: dict) -> dict:

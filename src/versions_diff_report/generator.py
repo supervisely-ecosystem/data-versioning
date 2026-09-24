@@ -18,9 +18,9 @@ tag** — because that is how a person looks for a change: which dataset, which 
 what inside it. The levels a modality does not have are simply absent: an image figure
 *is* the label, so there is no object above it.
 
-**The tree is capped, twice.** Only the first `ITEM_TREE_LIMIT` changed items are in the
-model, and each one's own branch was already capped when the diff was computed. A 14k-item
-diff must open in a browser; the full detail is in `data/items_*.json`, which is what an
+**The tree is capped, twice.** Only `ITEM_TREE_LIMIT` changed items are in the model,
+shared out between added, removed and changed-in-place items, and each one's own branch
+was already capped when the diff was computed. A 14k-item diff must open in a browser; the full detail is in `data/items_*.json`, which is what an
 automated consumer reads anyway.
 """
 
@@ -38,6 +38,8 @@ from versions_diff import (
     ITEM_STATUSES,
     META_FROM_FILE,
     META_TO_FILE,
+    STATUS_ADDED,
+    STATUS_REMOVED,
     STATUS_UNCHANGED,
 )
 
@@ -317,18 +319,55 @@ class VersionsDiffReport:
             json.dump(payload, f, ensure_ascii=False)
 
     def _read_records(self) -> List[dict]:
-        """The detail chunks, up to what the tree can draw.
+        """The detail chunks, up to what the tree can draw, shared out between kinds.
 
-        Read in chunk order and stopped at the cap rather than read whole and sliced: the
-        point of the cap is not to hold a 14k-item report in memory to draw 500 of it.
+        The chunks list additions, then removals, then the items that changed in place, so
+        taking the first ITEM_TREE_LIMIT records let a version that added that many items
+        hide every edit from the tree. Each kind keeps at most the limit while the chunks
+        stream past, the limit is split between the kinds that have records, and what one
+        kind cannot use goes to the others. Chunk order is kept within what is drawn.
         """
-        records: List[dict] = []
+        buckets: Dict[str, List[tuple]] = {"changed": [], "removed": [], "added": []}
+        # How many of each kind exist, so reading stops once every kind has what it can use.
+        items = self.summary.get("items", {})
+        total = self.summary.get("details", {}).get("recordCount", 0)
+        present = {
+            "added": items.get(STATUS_ADDED, 0),
+            "removed": items.get(STATUS_REMOVED, 0),
+        }
+        present["changed"] = max(0, total - present["added"] - present["removed"])
+        enough = {kind: min(ITEM_TREE_LIMIT, count) for kind, count in present.items()}
+        position = 0
         for chunk in self.summary.get("details", {}).get("chunks", []):
+            if all(len(buckets[kind]) >= enough[kind] for kind in buckets):
+                break
             for record in self._read_json(chunk, default=[]):
-                records.append(record)
-                if len(records) >= ITEM_TREE_LIMIT:
-                    return records
-        return records
+                statuses = record.get("statuses") or []
+                kind = (
+                    "added"
+                    if STATUS_ADDED in statuses
+                    else "removed" if STATUS_REMOVED in statuses else "changed"
+                )
+                if len(buckets[kind]) < ITEM_TREE_LIMIT:
+                    buckets[kind].append((position, record))
+                position += 1
+
+        quota = {kind: 0 for kind in buckets}
+        room = ITEM_TREE_LIMIT
+        waiting = [kind for kind in buckets if buckets[kind]]
+        while room and waiting:
+            share = max(1, room // len(waiting))
+            for kind in list(waiting):
+                take = min(share, len(buckets[kind]) - quota[kind], room)
+                quota[kind] += take
+                room -= take
+                if quota[kind] == len(buckets[kind]):
+                    waiting.remove(kind)
+                if not room:
+                    break
+
+        chosen = [entry for kind in buckets for entry in buckets[kind][: quota[kind]]]
+        return [record for _, record in sorted(chosen, key=lambda entry: entry[0])]
 
     # ------------------------------------------------------------------ writing
 
@@ -736,6 +775,9 @@ class VersionsDiffReport:
         }
 
     def _class_colour(self, name) -> Optional[str]:
+        # A reclassified object carries [was, now]; it is drawn in the class it has now.
+        if isinstance(name, list) and name:
+            name = name[-1]
         if not isinstance(name, str):
             return None
 
@@ -748,6 +790,8 @@ class VersionsDiffReport:
         where a class was deleted between the versions, and then the figure is the one that
         was actually there.
         """
+        if isinstance(name, list) and name:
+            name = name[-1]
         shape = geometry or (self._shapes.get(name) if isinstance(name, str) else None)
 
         return SHAPE_ICONS.get(shape, DEFAULT_SHAPE_ICON)
@@ -846,8 +890,10 @@ class VersionsDiffReport:
 
     def context(self) -> dict:
         counts = self.summary.get("items", {})
-        changed = sum(counts.get(status, 0) for status in ITEM_STATUSES)
+        # One detail record per changed item. Summing the status counters counted an item
+        # renamed and re-annotated twice - an item can hold several statuses at once.
         record_count = self.summary.get("details", {}).get("recordCount", 0)
+        changed = record_count
 
         classes, classes_hidden, classes_omitted = self._classes_overview()
         tags, tags_hidden, tags_omitted = self._tags_overview()

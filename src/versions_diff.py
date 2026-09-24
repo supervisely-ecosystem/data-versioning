@@ -30,7 +30,7 @@ import json
 import os
 import time
 from collections import defaultdict, deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import (
     Any,
     Deque,
@@ -341,8 +341,8 @@ def _dataset_paths(snapshot: VersionSnapshot) -> Dict[int, str]:
 def dataset_diff(snapshot_from: VersionSnapshot, snapshot_to: VersionSnapshot) -> dict:
     """Datasets by id, falling back to full path — the same order items use.
 
-    A dataset matched by id whose path changed was either renamed or moved, and the two
-    are told apart by the leaf: a new leaf is a rename, a new parent is a move.
+    A dataset matched by id whose path changed was renamed (its own name changed), moved
+    (its parent changed), both, or neither - when only an ancestor changed.
     """
     before = {ds.id: ds for ds in snapshot_from.datasets()}
     after = {ds.id: ds for ds in snapshot_to.datasets()}
@@ -358,7 +358,12 @@ def dataset_diff(snapshot_from: VersionSnapshot, snapshot_to: VersionSnapshot) -
         if path_was == path_now:
             continue
         record = {"id": dataset_id, "from": path_was, "to": path_now}
-        (renamed if was.name != now.name else moved).append(record)
+        # Only what happened to this dataset itself: the children of a renamed dataset
+        # have new paths too, and the rename is already their parent's entry.
+        if was.name != now.name:
+            renamed.append(record)
+        if was.parent_id != now.parent_id:
+            moved.append(record)
 
     # Only paths whose id is absent from the other side can be an addition or a removal:
     # an id-matched dataset that moved is already accounted for above.
@@ -387,6 +392,7 @@ class ItemRef:
     name: str
     hash: Optional[str]
     updated_at: Optional[str]
+    dataset_id: Optional[int] = None
 
 
 @dataclass
@@ -401,7 +407,12 @@ class ItemPair:
 
     @property
     def moved(self) -> bool:
-        return self.before.dataset_path != self.after.dataset_path
+        # The item changed dataset. One that stayed while its dataset was renamed or moved
+        # did not move; the dataset's own entry says what happened to the path.
+        return (
+            self.before.dataset_id != self.after.dataset_id
+            and self.before.dataset_path != self.after.dataset_path
+        )
 
     @property
     def content_changed(self) -> bool:
@@ -445,6 +456,7 @@ def _refs_from_table(table: pa.Table, paths: Dict[int, str]) -> Iterator[ItemRef
             name=names[index],
             hash=hashes[index],
             updated_at=updated[index],
+            dataset_id=dataset_ids[index],
         )
 
 
@@ -464,18 +476,12 @@ def _column_differs(left: pa.ChunkedArray, right: pa.ChunkedArray) -> pa.Chunked
     return pc.or_(one_null, values_differ)
 
 
-def _touched_mask(
-    common_from: pa.Table,
-    common_to: pa.Table,
-    paths_from: Dict[int, str],
-    paths_to: Dict[int, str],
-) -> pa.ChunkedArray:
+def _touched_mask(common_from: pa.Table, common_to: pa.Table) -> pa.ChunkedArray:
     """Rows of the two aligned tables where anything about the item moved.
 
-    The dataset is compared by id and then corrected: an item can sit in the same dataset
-    while that dataset is renamed or moved, and its path is what the report shows. The
-    dataset tree is tiny, so the set of ids whose path changed is computed once and the
-    rows are marked with a single `is_in`.
+    The dataset is compared by id, not by path: an item that stays while its dataset is
+    renamed has not changed, and marking it would put every item under a renamed dataset
+    into the report as a pair - half a million of them for one rename on a large project.
     """
     touched = _column_differs(
         common_from.column(SnapshotColumn.UPDATED_AT), common_to.column(SnapshotColumn.UPDATED_AT)
@@ -483,20 +489,6 @@ def _touched_mask(
     for column in (SnapshotColumn.NAME, SnapshotColumn.HASH, SnapshotColumn.DATASET_ID):
         touched = pc.or_(
             touched, _column_differs(common_from.column(column), common_to.column(column))
-        )
-
-    repathed = [
-        dataset_id
-        for dataset_id, path in paths_from.items()
-        if dataset_id in paths_to and paths_to[dataset_id] != path
-    ]
-    if repathed:
-        touched = pc.or_(
-            touched,
-            pc.is_in(
-                common_to.column(SnapshotColumn.DATASET_ID),
-                value_set=pa.array(repathed, type=pa.int64()),
-            ),
         )
 
     return pc.fill_null(touched, True)
@@ -545,7 +537,7 @@ def match_items(
     # rather than by building two Python objects per row. On half a million items that is
     # the difference between a 900 MB peak and a flat one: the rows that changed are a
     # handful, and only those become objects.
-    touched = _touched_mask(common_from, common_to, paths_from, paths_to)
+    touched = _touched_mask(common_from, common_to)
     changed_count = pc.sum(pc.cast(touched, pa.int64())).as_py() or 0
     match.unchanged_count += common_from.num_rows - changed_count
 
@@ -662,14 +654,18 @@ class ClassDelta:
     added_objects: Set[Any] = field(default_factory=set)
     removed_objects: Set[Any] = field(default_factory=set)
     changed_objects: Set[Any] = field(default_factory=set)
+    # Image figures of items that arrived or left whole: each is its own object, and
+    # they are counted rather than collected - an import of 500k images is millions.
+    counted_objects_added: int = 0
+    counted_objects_removed: int = 0
 
     def to_json(self) -> dict:
         return {
             "figuresAdded": self.figures.added,
             "figuresRemoved": self.figures.removed,
             "figuresModified": self.figures.changed,
-            "objectsAdded": len(self.added_objects),
-            "objectsRemoved": len(self.removed_objects),
+            "objectsAdded": len(self.added_objects) + self.counted_objects_added,
+            "objectsRemoved": len(self.removed_objects) + self.counted_objects_removed,
             "objectsModified": len(self.changed_objects - self.added_objects - self.removed_objects),
         }
 
@@ -727,21 +723,25 @@ class TagRow(NamedTuple):
 
 
 def _figure_index(
-    snapshot: VersionSnapshot, item_ids: Set[int]
-) -> Dict[int, Dict[int, FigureRow]]:
-    """figure id -> FigureRow, grouped by item, for the named items only.
+    snapshot: VersionSnapshot, item_ids: Set[int], count_only: Set[int] = frozenset()
+) -> Tuple[Dict[int, Dict[int, FigureRow]], Dict[int, Dict[Optional[str], int]]]:
+    """figure id -> FigureRow for `item_ids`, and figures per class for `count_only`.
 
     The scan itself is over the whole figures table — a Parquet file has no index to
     seek by item — but only the rows belonging to a touched item are ever materialised,
-    which is what keeps this bounded by what changed rather than by project size.
+    which is what keeps this bounded by what changed rather than by project size. Items
+    that arrived or left whole are reported in counts, so their rows are counted as the
+    batches stream past; one scan serves both.
     """
-    if not item_ids:
-        return {}
+    wanted_ids = set(item_ids) | set(count_only)
+    if not wanted_ids:
+        return {}, {}
 
-    wanted = pa.array(sorted(item_ids), type=pa.int64())
+    wanted = pa.array(sorted(wanted_ids), type=pa.int64())
     index: Dict[int, Dict[int, FigureRow]] = defaultdict(dict)
+    counts: Dict[int, Dict[Optional[str], int]] = defaultdict(lambda: defaultdict(int))
 
-    for batch in _scan_figures(snapshot, item_ids):
+    for batch in _scan_figures(snapshot, wanted_ids):
         if not batch.num_rows:
             continue
         table = pa.Table.from_batches([batch]).filter(
@@ -763,6 +763,9 @@ def _figure_index(
         frames = column(SnapshotColumn.FRAME_INDEX)
 
         for position, figure_id in enumerate(figure_ids):
+            if owners[position] in count_only:
+                counts[owners[position]][classes[position]] += 1
+                continue
             index[owners[position]][figure_id] = FigureRow(
                 class_name=classes[position],
                 geometry_type=geometries[position],
@@ -771,7 +774,91 @@ def _figure_index(
                 frame_index=frames[position],
             )
 
+    return index, counts
+
+
+class ObjectRow(NamedTuple):
+    """One annotation object: the class it has and when it last changed."""
+
+    class_name: Optional[str]
+    updated_at: Optional[str]
+
+
+OBJECT_ENTITY_COLUMNS = (
+    SnapshotColumn.OBJECT_ID,
+    SnapshotColumn.ITEM_ID,
+    SnapshotColumn.CLASS_NAME,
+    SnapshotColumn.UPDATED_AT,
+)
+
+
+def _object_index(
+    snapshot: VersionSnapshot, item_ids: Set[int]
+) -> Dict[int, Dict[Any, ObjectRow]]:
+    """object id -> ObjectRow, grouped by item, for the named items only.
+
+    The object is where a video or volume keeps its class, so a class reassigned on an
+    object moves the object row and none of its figures - compared through the figures
+    alone, that edit does not exist. One row per object, far smaller than the figures.
+    """
+    if not item_ids or snapshot.project_type not in MODALITIES_WITH_OBJECTS:
+        return {}
+    index: Dict[int, Dict[Any, ObjectRow]] = defaultdict(dict)
+    for rows in snapshot.iter_objects(
+        batch_size=SCAN_BATCH_SIZE, columns=list(OBJECT_ENTITY_COLUMNS), item_ids=item_ids
+    ):
+        for row in rows:
+            item_id = row.get(SnapshotColumn.ITEM_ID)
+            if item_id in item_ids:
+                # Keyed as text: a figure's object id can come out of a batch as text when
+                # the batch mixed server ids and uuid keys, and the two must meet.
+                index[item_id][_object_key(row.get(SnapshotColumn.OBJECT_ID))] = ObjectRow(
+                    class_name=row.get(SnapshotColumn.CLASS_NAME),
+                    updated_at=row.get(SnapshotColumn.UPDATED_AT),
+                )
     return index
+
+
+def _compare_objects(
+    before: Dict[Any, ObjectRow],
+    after: Dict[Any, ObjectRow],
+    by_class: Dict[str, ClassDelta],
+    tree: Optional["ItemTree"] = None,
+) -> EntityDelta:
+    """Annotation objects by id: added, removed, and changed - class or `updated_at`."""
+    delta = EntityDelta()
+
+    def mark(object_id: Any, row: ObjectRow, action: str) -> Optional[dict]:
+        if tree is None:
+            return None
+        node = tree.object_node(object_id, row.class_name)
+        if node is not None:
+            node["action"] = action
+        return node
+
+    for object_id in sorted(after.keys() - before.keys(), key=repr):
+        row = after[object_id]
+        delta.added += 1
+        by_class[row.class_name].added_objects.add(object_id)
+        mark(object_id, row, ACTION_ADDED)
+
+    for object_id in sorted(before.keys() - after.keys(), key=repr):
+        row = before[object_id]
+        delta.removed += 1
+        by_class[row.class_name].removed_objects.add(object_id)
+        mark(object_id, row, ACTION_REMOVED)
+
+    for object_id in sorted(before.keys() & after.keys(), key=repr):
+        was, now = before[object_id], after[object_id]
+        if was == now:
+            continue
+        delta.changed += 1
+        by_class[now.class_name].changed_objects.add(object_id)
+        node = mark(object_id, now, ACTION_CHANGED)
+        if node is not None and was.class_name != now.class_name:
+            node["class"] = [was.class_name, now.class_name]
+
+    return delta
 
 
 class ObjectClasses:
@@ -827,22 +914,30 @@ def _tag_names(snapshot: VersionSnapshot) -> Dict[int, str]:
     return names
 
 
-def _tag_index(snapshot: VersionSnapshot, item_ids: Set[int]) -> Dict[int, Dict[Any, TagRow]]:
-    """tag assignment id -> TagRow, grouped by item.
+def _tag_index(
+    snapshot: VersionSnapshot, item_ids: Set[int], count_only: Set[int] = frozenset()
+) -> Tuple[Dict[int, Dict[Any, TagRow]], Dict[int, Dict[Optional[str], int]]]:
+    """tag assignment id -> TagRow for `item_ids`, and assignments per name for `count_only`.
 
     An assignment with no id at all — which is how the legacy pickle format stored them —
     is keyed by its own content instead, so it can still be seen as present or absent.
     """
-    if not item_ids:
-        return {}
+    wanted_ids = set(item_ids) | set(count_only)
+    if not wanted_ids:
+        return {}, {}
 
     names = _tag_names(snapshot)
     index: Dict[int, Dict[Any, TagRow]] = defaultdict(dict)
+    counts: Dict[int, Dict[Optional[str], int]] = defaultdict(lambda: defaultdict(int))
 
-    for rows in _scan_tags(snapshot, item_ids):
+    for rows in _scan_tags(snapshot, wanted_ids):
         for row in rows:
+            name = row.get(SnapshotColumn.NAME) or names.get(row.get(SnapshotColumn.TAG_ID))
+            if row[SnapshotColumn.ITEM_ID] in count_only:
+                counts[row[SnapshotColumn.ITEM_ID]][name] += 1
+                continue
             tag = TagRow(
-                name=row.get(SnapshotColumn.NAME) or names.get(row.get(SnapshotColumn.TAG_ID)),
+                name=name,
                 owner_type=row.get(SnapshotColumn.OWNER_TYPE),
                 owner_id=row.get(SnapshotColumn.OWNER_ID),
                 value_json=row.get(SnapshotColumn.VALUE_JSON),
@@ -855,7 +950,7 @@ def _tag_index(snapshot: VersionSnapshot, item_ids: Set[int]) -> Dict[int, Dict[
                 key if key is not None else tag.comparable()[:-1]
             ] = tag
 
-    return index
+    return index, counts
 
 
 def _scan_tags(snapshot: VersionSnapshot, item_ids: Set[int]) -> Iterator[List[dict]]:
@@ -993,10 +1088,19 @@ class ItemTree:
     figures: Dict[str, dict] = field(default_factory=dict)
     tags: List[dict] = field(default_factory=list)
     omitted: int = 0
+    # Tags hung under an object or a figure, which none of the three above holds.
+    nested_tags: int = 0
 
     @property
     def node_count(self) -> int:
-        return len(self.objects) + len(self.figures) + len(self.tags)
+        return len(self.objects) + len(self.figures) + len(self.tags) + self.nested_tags
+
+    def charge(self) -> bool:
+        """Room for one tag under an object or a figure; counted against the cap."""
+        if not self._room():
+            return False
+        self.nested_tags += 1
+        return True
 
     def _room(self) -> bool:
         if self.node_count < self.limit:
@@ -1093,19 +1197,34 @@ def _compare_figures(
     after: Dict[Any, FigureRow],
     by_class: Dict[str, ClassDelta],
     tree: Optional[ItemTree] = None,
+    objects_before: Iterable[Any] = (),
+    objects_after: Iterable[Any] = (),
 ) -> EntityDelta:
     delta = EntityDelta()
 
     def owner(figure: FigureRow, item_key: Any) -> Any:
         # An image figure has no object above it, so it is its own: counting objects there
-        # counts figures, which is the right answer for that modality.
-        return figure.object_id if figure.object_id is not None else item_key
+        # counts figures, which is the right answer for that modality. Objects are keyed as
+        # text, the way the object index keys them.
+        return _object_key(figure.object_id) if figure.object_id is not None else item_key
+
+    # An object is added or removed only when none of its figures is on the other side; a
+    # track that gained or lost a frame is a modified object, not a new or a deleted one.
+    # Objects with no figures on a side still exist there - tagged, never drawn.
+    owners_before = {owner(figure, figure_id) for figure_id, figure in before.items()}
+    owners_before.update(objects_before)
+    owners_after = {owner(figure, figure_id) for figure_id, figure in after.items()}
+    owners_after.update(objects_after)
 
     for figure_id in sorted(after.keys() - before.keys(), key=repr):
         figure = after[figure_id]
         delta.added += 1
         by_class[figure.class_name].figures.added += 1
-        by_class[figure.class_name].added_objects.add(owner(figure, figure_id))
+        object_key = owner(figure, figure_id)
+        if object_key in owners_before:
+            by_class[figure.class_name].changed_objects.add(object_key)
+        else:
+            by_class[figure.class_name].added_objects.add(object_key)
         if tree is not None:
             tree.figure_node(figure_id, figure, ACTION_ADDED)
 
@@ -1113,7 +1232,11 @@ def _compare_figures(
         figure = before[figure_id]
         delta.removed += 1
         by_class[figure.class_name].figures.removed += 1
-        by_class[figure.class_name].removed_objects.add(owner(figure, figure_id))
+        object_key = owner(figure, figure_id)
+        if object_key in owners_after:
+            by_class[figure.class_name].changed_objects.add(object_key)
+        else:
+            by_class[figure.class_name].removed_objects.add(object_key)
         if tree is not None:
             tree.figure_node(figure_id, figure, ACTION_REMOVED)
 
@@ -1175,21 +1298,28 @@ def _compare_tags(
         if tree is None:
             return
         if tag.owner_type == OWNER_OBJECT:
+            # Room for the tag first: creating its parent and then finding no room for it
+            # left a bare row with nothing under it.
+            if not tree.charge():
+                return
             parent = tree.object_node(tag.owner_id, class_of(tag.owner_id))
-            if parent is not None:
-                parent["tags"].append(node)
+            if parent is None:
+                tree.nested_tags -= 1
+                return
+            parent["tags"].append(node)
             return
         if tag.owner_type == OWNER_FIGURE:
             figure = figures.get(tag.owner_id)
-            parent = (
-                tree.figure_node(tag.owner_id, figure)
-                if figure is not None
-                # The figure is gone from this version - a removed figure's tag - so the
-                # tag is reported on the item rather than invented a parent.
-                else None
-            )
-            if parent is not None:
-                parent["tags"].append(node)
+            # The figure is gone from this version - a removed figure's tag - so the tag is
+            # reported on the item rather than invented a parent.
+            if figure is not None:
+                if not tree.charge():
+                    return
+                parent = tree.figure_node(tag.owner_id, figure)
+                if parent is not None:
+                    parent["tags"].append(node)
+                    return
+                tree.nested_tags -= 1
                 return
         tree.item_tag(node)
 
@@ -1268,17 +1398,62 @@ class DetailWriter:
         self._buffer = []
 
 
-def _class_counts(figures: Dict[Any, FigureRow]) -> Dict[str, int]:
-    """How many figures of each class an item holds.
+def _ordered_counts(counts: Dict[Optional[str], int]) -> Dict[Optional[str], int]:
+    """How many figures of each class an item holds, in name order.
 
     What a whole item arriving or leaving is worth saying about its annotations: naming its
     four thousand figures one by one is a download, and "+4000" alone does not say of what.
     """
-    counts: Dict[str, int] = defaultdict(int)
-    for figure in figures.values():
-        counts[figure.class_name] += 1
-
     return {name: counts[name] for name in sorted(counts, key=lambda n: (n is None, n))}
+
+
+def _whole_item_figures(
+    per_class: Dict[Optional[str], int],
+    objects: Dict[Any, "ObjectRow"],
+    by_class: Dict[str, ClassDelta],
+    status: str,
+    has_objects: bool,
+) -> EntityDelta:
+    """The figures and objects of an item that arrived or left, as counts."""
+    added = status == STATUS_ADDED
+    for class_name, count in per_class.items():
+        delta = by_class[class_name]
+        if added:
+            delta.figures.added += count
+        else:
+            delta.figures.removed += count
+        if not has_objects:
+            # No objects above an image figure: each one is its own.
+            if added:
+                delta.counted_objects_added += count
+            else:
+                delta.counted_objects_removed += count
+    for object_id, row in objects.items():
+        target = by_class[row.class_name]
+        (target.added_objects if added else target.removed_objects).add(object_id)
+    total = sum(per_class.values())
+    return EntityDelta(added=total) if added else EntityDelta(removed=total)
+
+
+def _whole_item_tags(
+    per_name: Dict[Optional[str], int],
+    totals: EntityDelta,
+    by_name: Dict[str, EntityDelta],
+    status: str,
+) -> EntityDelta:
+    """The tag assignments of an item that arrived or left, as counts."""
+    added = status == STATUS_ADDED
+    for name, count in per_name.items():
+        if added:
+            by_name[name].added += count
+        else:
+            by_name[name].removed += count
+    total = sum(per_name.values())
+    if added:
+        totals.added += total
+        return EntityDelta(added=total)
+    totals.removed += total
+    return EntityDelta(removed=total)
 
 
 def _item_record(
@@ -1302,10 +1477,15 @@ def _item_record(
         record["classes"] = classes
     if tree is not None:
         record.update(tree.to_json())
+    # The path counts only when the item changed dataset: under a renamed dataset every
+    # path differs, and "was ds1/img" on one edited row reads as a move that did not happen.
     if previous is not None and (
         previous.item_id != ref.item_id
         or previous.name != ref.name
-        or previous.dataset_path != ref.dataset_path
+        or (
+            previous.dataset_id != ref.dataset_id
+            and previous.dataset_path != ref.dataset_path
+        )
     ):
         record["previous"] = {
             "itemId": previous.item_id,
@@ -1425,22 +1605,38 @@ def compute_diff(
     object_classes = ObjectClasses(snapshot_from, snapshot_to)
 
     touched = match.touched_pairs()
-    ids_from = {pair.before.item_id for pair in touched} | {ref.item_id for ref in match.removed}
-    ids_to = {pair.after.item_id for pair in touched} | {ref.item_id for ref in match.added}
+    # Pairs are compared entity by entity; an item that arrived or left whole is only
+    # counted, so its figures and tags are never held as rows.
+    ids_from = {pair.before.item_id for pair in touched}
+    ids_to = {pair.after.item_id for pair in touched}
+    removed_ids = {ref.item_id for ref in match.removed}
+    added_ids = {ref.item_id for ref in match.added}
 
     stage = time.perf_counter()
-    figures_from = _figure_index(snapshot_from, ids_from) if comparable else {}
-    figures_to = _figure_index(snapshot_to, ids_to) if comparable else {}
-    stats["figures_read"] = sum(len(figures) for figures in figures_from.values()) + sum(
-        len(figures) for figures in figures_to.values()
+    figures_from, leaving_counts = (
+        _figure_index(snapshot_from, ids_from, removed_ids) if comparable else ({}, {})
+    )
+    figures_to, arriving_counts = (
+        _figure_index(snapshot_to, ids_to, added_ids) if comparable else ({}, {})
+    )
+    objects_from = _object_index(snapshot_from, ids_from | removed_ids) if comparable else {}
+    objects_to = _object_index(snapshot_to, ids_to | added_ids) if comparable else {}
+    stats["figures_read"] = (
+        sum(len(figures) for figures in figures_from.values())
+        + sum(len(figures) for figures in figures_to.values())
+        + sum(sum(counts.values()) for counts in leaving_counts.values())
+        + sum(sum(counts.values()) for counts in arriving_counts.values())
     )
     stats["figures_msec"] = msec(stage)
 
     stage = time.perf_counter()
-    tags_from = _tag_index(snapshot_from, ids_from)
-    tags_to = _tag_index(snapshot_to, ids_to)
-    stats["tags_read"] = sum(len(tags) for tags in tags_from.values()) + sum(
-        len(tags) for tags in tags_to.values()
+    tags_from, leaving_tags = _tag_index(snapshot_from, ids_from, removed_ids)
+    tags_to, arriving_tags = _tag_index(snapshot_to, ids_to, added_ids)
+    stats["tags_read"] = (
+        sum(len(tags) for tags in tags_from.values())
+        + sum(len(tags) for tags in tags_to.values())
+        + sum(sum(counts.values()) for counts in leaving_tags.values())
+        + sum(sum(counts.values()) for counts in arriving_tags.values())
     )
     stats["tags_msec"] = msec(stage)
     stats["touched"] = len(touched)
@@ -1457,36 +1653,52 @@ def compute_diff(
     details = DetailWriter(output_dir, chunk_size=details_chunk_size)
 
     # An added or a removed item gets counts but no tree - see ItemTree.
-    for ref in match.added:
-        arriving = figures_to.get(ref.item_id, {})
-        figures = _compare_figures({}, arriving, by_class)
-        tags = _compare_tags({}, tags_to.get(ref.item_id, {}), tag_totals, by_tag_name)
-        counts[STATUS_ADDED] += 1
-        by_dataset[ref.dataset_path][STATUS_ADDED] += 1
-        by_dataset[ref.dataset_path][ITEM_COUNT_KEY] += 1
-        details.add(
-            _item_record(ref, [STATUS_ADDED], figures, tags, classes=_class_counts(arriving))
-        )
-
-    for ref in match.removed:
-        leaving = figures_from.get(ref.item_id, {})
-        figures = _compare_figures(leaving, {}, by_class)
-        tags = _compare_tags(tags_from.get(ref.item_id, {}), {}, tag_totals, by_tag_name)
-        counts[STATUS_REMOVED] += 1
-        by_dataset[ref.dataset_path][STATUS_REMOVED] += 1
-        by_dataset[ref.dataset_path][ITEM_COUNT_KEY] += 1
-        details.add(
-            _item_record(ref, [STATUS_REMOVED], figures, tags, classes=_class_counts(leaving))
-        )
+    for refs, status, figure_counts, object_index, tag_counts in (
+        (match.added, STATUS_ADDED, arriving_counts, objects_to, arriving_tags),
+        (match.removed, STATUS_REMOVED, leaving_counts, objects_from, leaving_tags),
+    ):
+        for ref in refs:
+            if status == STATUS_REMOVED and ref.dataset_id in paths_to:
+                # Filed under the path its dataset has now: a renamed dataset is one row of
+                # the tree, not its old name holding the removals and its new one the rest.
+                ref = replace(ref, dataset_path=paths_to[ref.dataset_id])
+            per_class = figure_counts.get(ref.item_id, {})
+            figures = _whole_item_figures(
+                per_class,
+                object_index.get(ref.item_id, {}),
+                by_class,
+                status,
+                has_objects=snapshot_to.project_type in MODALITIES_WITH_OBJECTS,
+            )
+            tags = _whole_item_tags(
+                tag_counts.get(ref.item_id, {}), tag_totals, by_tag_name, status
+            )
+            counts[status] += 1
+            by_dataset[ref.dataset_path][status] += 1
+            by_dataset[ref.dataset_path][ITEM_COUNT_KEY] += 1
+            details.add(
+                _item_record(ref, [status], figures, tags, classes=_ordered_counts(per_class))
+            )
 
     for pair in match.pairs:
         figures = EntityDelta()
         tags = EntityDelta()
+        objects = EntityDelta()
         tree = ItemTree(limit=max_nodes_per_item)
         if pair.touched:
             figures_was = figures_from.get(pair.before.item_id, {})
             figures_now = figures_to.get(pair.after.item_id, {})
-            figures = _compare_figures(figures_was, figures_now, by_class, tree)
+            objects_was = objects_from.get(pair.before.item_id, {})
+            objects_now = objects_to.get(pair.after.item_id, {})
+            objects = _compare_objects(objects_was, objects_now, by_class, tree)
+            figures = _compare_figures(
+                figures_was,
+                figures_now,
+                by_class,
+                tree,
+                objects_before=objects_was.keys(),
+                objects_after=objects_now.keys(),
+            )
             tags = _compare_tags(
                 tags_from.get(pair.before.item_id, {}),
                 tags_to.get(pair.after.item_id, {}),
@@ -1509,7 +1721,7 @@ def compute_diff(
         # Derived from the deltas, not from the timestamp: an item's updated_at also
         # moves when it is renamed or its meta is edited, and calling that an annotation
         # change would put thousands of untouched annotations in the report.
-        if figures or tags:
+        if figures or tags or objects:
             statuses.append(STATUS_ANNOTATION_CHANGED)
 
         if not statuses:
