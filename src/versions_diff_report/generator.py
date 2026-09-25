@@ -24,6 +24,7 @@ was already capped when the diff was computed. A 14k-item diff must open in a br
 automated consumer reads anyway.
 """
 
+import gzip
 import json
 import os
 from datetime import datetime
@@ -317,6 +318,14 @@ class VersionsDiffReport:
         with open(path, encoding="utf-8") as f:
             return json.load(f)
 
+    def _write_gzip_json(self, relative: str, payload: Any) -> None:
+        # A page is mostly repeated labels, colours and icons: 1.9 KB per item as text,
+        # 43 bytes gzipped. The panel inflates it in the browser.
+        path = self._path(relative)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with gzip.open(path, "wt", encoding="utf-8", compresslevel=6) as f:
+            json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
+
     def _write_json(self, relative: str, payload: Any) -> None:
         path = self._path(relative)
         os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -416,7 +425,7 @@ class VersionsDiffReport:
         def flush(path: str) -> None:
             entry = by_path[path]
             entry["pages"] += 1
-            self._write_json(f"{entry['dir']}page_{entry['pages']:04d}.json", buffers[path])
+            self._write_gzip_json(f"{entry['dir']}page_{entry['pages']:04d}.json.gz", buffers[path])
             buffers[path] = []
 
         for chunk in self.summary.get("details", {}).get("chunks", []):
@@ -439,8 +448,8 @@ class VersionsDiffReport:
             entry = by_path[path]
             entry["refs"] = {}
             for status, positions in refs[path].items():
-                name = f"{entry['dir']}refs_{status}.json"
-                self._write_json(name, positions)
+                name = f"{entry['dir']}refs_{status}.json.gz"
+                self._write_gzip_json(name, positions)
                 entry["refs"][status] = name
         return by_path
 
