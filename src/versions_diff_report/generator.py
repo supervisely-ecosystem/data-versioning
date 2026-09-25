@@ -321,10 +321,13 @@ class VersionsDiffReport:
     def _write_gzip_json(self, relative: str, payload: Any) -> None:
         # A page is mostly repeated labels, colours and icons: 1.9 KB per item as text,
         # 43 bytes gzipped. The panel inflates it in the browser.
+        # One json.dumps and one compress: json.dump into a file goes through the pure-Python
+        # encoder and a write per token, which was 85% of the time of a 505k-item report.
         path = self._path(relative)
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        with gzip.open(path, "wt", encoding="utf-8", compresslevel=6) as f:
-            json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
+        text = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+        with open(path, "wb") as f:
+            f.write(gzip.compress(text.encode("utf-8"), compresslevel=6))
 
     def _write_json(self, relative: str, payload: Any) -> None:
         path = self._path(relative)
