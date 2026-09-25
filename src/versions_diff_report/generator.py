@@ -47,6 +47,11 @@ from versions_diff import (
 # above it still describe the whole diff.
 ITEM_TREE_LIMIT = 500
 
+# Items per page of a dataset. A dataset's items are published as pages of shaped nodes,
+# opened one at a time, so a 440k-item dataset costs its reader only the pages they open.
+PAGE_SIZE = 500
+PAGES_DIR = "pages"
+
 # Rows in the overview's class and tag lists. Five are drawn and the rest open in a dialog,
 # so every one of these cards is the same height whatever the project has in it - a list is
 # meant to be taken in at a glance, not to push the tree off the screen. The hard limit is
@@ -381,9 +386,63 @@ class VersionsDiffReport:
         what stops every published report from carrying a copy of a stylesheet.
         """
         model = self.context()
+        pages = self._write_pages()
+        for dataset in model["tree"]:
+            entry = pages.get(dataset.pop("_path", None))
+            if entry is None:
+                continue
+            # Loaded by the panel when the dataset is opened; nothing is inlined.
+            dataset.update(entry)
+            dataset["entries"] = []
+            dataset["omitted"] = 0
+        model["items"]["paged"] = bool(pages)
         with open(path, "w", encoding="utf-8") as f:
             json.dump(model, f, ensure_ascii=False)
         return model
+
+    def _write_pages(self) -> Dict[str, dict]:
+        """Every changed item, shaped, in pages per dataset, plus per-status references.
+
+        Detail chunks are in the order the pass wrote them - added, removed, then pairs -
+        across all datasets, so they are streamed once and each dataset keeps only the
+        page it is filling. For each status a dataset also gets a list of [page, offset]
+        references, so a filter reaches the three renamed items of a 440k-item dataset by
+        reading that list and the pages it names, not every page.
+        """
+        by_path: Dict[str, dict] = {}
+        buffers: Dict[str, List[dict]] = {}
+        refs: Dict[str, Dict[str, List[List[int]]]] = {}
+
+        def flush(path: str) -> None:
+            entry = by_path[path]
+            entry["pages"] += 1
+            self._write_json(f"{entry['dir']}page_{entry['pages']:04d}.json", buffers[path])
+            buffers[path] = []
+
+        for chunk in self.summary.get("details", {}).get("chunks", []):
+            for record in self._read_json(chunk, default=[]):
+                path = record.get("datasetPath") or ""
+                if path not in by_path:
+                    by_path[path] = {"dir": f"{PAGES_DIR}/d{len(by_path) + 1:04d}/", "pages": 0}
+                    buffers[path] = []
+                    refs[path] = {}
+                page, offset = by_path[path]["pages"] + 1, len(buffers[path])
+                for status in record.get("statuses") or []:
+                    refs[path].setdefault(status, []).append([page, offset])
+                buffers[path].append(self._item_node(record))
+                if len(buffers[path]) >= PAGE_SIZE:
+                    flush(path)
+
+        for path, buffer in buffers.items():
+            if buffer:
+                flush(path)
+            entry = by_path[path]
+            entry["refs"] = {}
+            for status, positions in refs[path].items():
+                name = f"{entry['dir']}refs_{status}.json"
+                self._write_json(name, positions)
+                entry["refs"][status] = name
+        return by_path
 
     # ------------------------------------------------------------------ widget data
 
@@ -503,6 +562,8 @@ class VersionsDiffReport:
             entries = [self._item_node(record) for record in drawn.get(path, [])]
             datasets.append(
                 {
+                    # The raw path, for matching this row to its pages; dropped before writing.
+                    "_path": path,
                     "path": _text(path) if path else "—",
                     "summary": ", ".join(
                         f"{count} {STATUS_LABELS.get(status, status)}"
