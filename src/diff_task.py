@@ -50,6 +50,9 @@ TF_DIFFS_DIR_NAME = "diffs"
 
 STATUS_FILE_NAME = "status.json"
 
+# Files per upload_bulk call when the report directory is published.
+PUBLISH_SLICE = 200
+
 # What the panel draws the report from: the model behind the rendered page, written beside
 # the diff it belongs to.
 REPORT_FILE_NAME = "report.json"
@@ -302,7 +305,15 @@ def _publish(
             src_paths.append(local_path)
             dst_paths.append(f"{remote_dir}{relative}")
 
-    uploaded = api.file.upload_bulk(team_id, src_paths, dst_paths)
+    # In slices: a big diff publishes a thousand pages, and one bulk call opens every file
+    # it is given at once.
+    uploaded = []
+    for start in range(0, len(src_paths), PUBLISH_SLICE):
+        uploaded += api.file.upload_bulk(
+            team_id,
+            src_paths[start : start + PUBLISH_SLICE],
+            dst_paths[start : start + PUBLISH_SLICE],
+        )
     logger.debug(f"Published {len(uploaded)} report files to {remote_dir}")
 
     ids = {file_info.name: file_info.id for file_info in uploaded}

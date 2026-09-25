@@ -27,6 +27,8 @@ automated consumer reads anyway.
 import gzip
 import json
 import os
+import tempfile
+import shutil
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -52,6 +54,8 @@ ITEM_TREE_LIMIT = 500
 # opened one at a time, so a 440k-item dataset costs its reader only the pages they open.
 PAGE_SIZE = 500
 PAGES_DIR = "pages"
+# Records held before they are written to their dataset's spool file.
+SPOOL_BATCH = 20_000
 
 # Rows in the overview's class and tag lists. Five are drawn and the rest open in a dialog,
 # so every one of these cards is the same height whatever the project has in it - a list is
@@ -408,6 +412,9 @@ class VersionsDiffReport:
             dataset["entries"] = []
             dataset["omitted"] = 0
         model["items"]["paged"] = bool(pages)
+        # Every item is reachable through its dataset's pages; nothing is left undrawn.
+        model["items"]["drawn"] = model["items"]["record_count"]
+        model["items"]["truncated"] = False
         with open(path, "w", encoding="utf-8") as f:
             json.dump(model, f, ensure_ascii=False)
         return model
@@ -415,46 +422,76 @@ class VersionsDiffReport:
     def _write_pages(self) -> Dict[str, dict]:
         """Every changed item, shaped, in pages per dataset, plus per-status references.
 
-        Detail chunks are in the order the pass wrote them - added, removed, then pairs -
-        across all datasets, so they are streamed once and each dataset keeps only the
-        page it is filling. For each status a dataset also gets a list of [page, offset]
-        references, so a filter reaches the three renamed items of a 440k-item dataset by
-        reading that list and the pages it names, not every page.
+        Two passes, so memory holds one page whatever the diff is made of. The detail
+        chunks list items in the order the pass wrote them - added, removed, then pairs -
+        across all datasets; the first pass spools each record to its dataset's file on
+        local disk, in bounded batches, and the second shapes one dataset at a time into
+        pages. For each status a dataset also gets a list of [page, offset] references, so
+        a filter reaches the three renamed items of a 440k-item dataset by reading that list
+        and the pages it names, not every page.
         """
-        by_path: Dict[str, dict] = {}
-        buffers: Dict[str, List[dict]] = {}
-        refs: Dict[str, Dict[str, List[List[int]]]] = {}
+        spool_dir = tempfile.mkdtemp(prefix="diff-pages-")
+        try:
+            order: List[str] = []
+            spool: Dict[str, str] = {}
+            pending: Dict[str, List[str]] = {}
+            pending_count = 0
 
-        def flush(path: str) -> None:
-            entry = by_path[path]
+            def spill() -> None:
+                nonlocal pending_count
+                for spooled_path, lines in pending.items():
+                    with open(spool[spooled_path], "a", encoding="utf-8") as f:
+                        f.writelines(lines)
+                pending.clear()
+                pending_count = 0
+
+            for chunk in self.summary.get("details", {}).get("chunks", []):
+                for record in self._read_json(chunk, default=[]):
+                    path = record.get("datasetPath") or ""
+                    if path not in spool:
+                        order.append(path)
+                        spool[path] = os.path.join(spool_dir, f"{len(order):05d}.jsonl")
+                    pending.setdefault(path, []).append(
+                        json.dumps(record, ensure_ascii=False) + "\n"
+                    )
+                    pending_count += 1
+                    if pending_count >= SPOOL_BATCH:
+                        spill()
+            spill()
+
+            by_path: Dict[str, dict] = {}
+            for number, path in enumerate(order, start=1):
+                by_path[path] = self._write_dataset_pages(spool[path], f"{PAGES_DIR}/d{number:04d}/")
+            return by_path
+        finally:
+            shutil.rmtree(spool_dir, ignore_errors=True)
+
+    def _write_dataset_pages(self, spool_path: str, directory: str) -> dict:
+        """One dataset's pages and status references, from its spooled records."""
+        entry = {"dir": directory, "pages": 0, "refs": {}}
+        refs: Dict[str, List[List[int]]] = {}
+        page: List[dict] = []
+
+        def flush() -> None:
             entry["pages"] += 1
-            self._write_gzip_json(f"{entry['dir']}page_{entry['pages']:04d}.json.gz", buffers[path])
-            buffers[path] = []
+            self._write_gzip_json(f"{directory}page_{entry['pages']:04d}.json.gz", page)
+            page.clear()
 
-        for chunk in self.summary.get("details", {}).get("chunks", []):
-            for record in self._read_json(chunk, default=[]):
-                path = record.get("datasetPath") or ""
-                if path not in by_path:
-                    by_path[path] = {"dir": f"{PAGES_DIR}/d{len(by_path) + 1:04d}/", "pages": 0}
-                    buffers[path] = []
-                    refs[path] = {}
-                page, offset = by_path[path]["pages"] + 1, len(buffers[path])
+        with open(spool_path, encoding="utf-8") as f:
+            for line in f:
+                record = json.loads(line)
                 for status in record.get("statuses") or []:
-                    refs[path].setdefault(status, []).append([page, offset])
-                buffers[path].append(self._item_node(record))
-                if len(buffers[path]) >= PAGE_SIZE:
-                    flush(path)
-
-        for path, buffer in buffers.items():
-            if buffer:
-                flush(path)
-            entry = by_path[path]
-            entry["refs"] = {}
-            for status, positions in refs[path].items():
-                name = f"{entry['dir']}refs_{status}.json.gz"
-                self._write_gzip_json(name, positions)
-                entry["refs"][status] = name
-        return by_path
+                    refs.setdefault(status, []).append([entry["pages"] + 1, len(page)])
+                page.append(self._item_node(record))
+                if len(page) >= PAGE_SIZE:
+                    flush()
+        if page:
+            flush()
+        for status, positions in refs.items():
+            name = f"{directory}refs_{status}.json.gz"
+            self._write_gzip_json(name, positions)
+            entry["refs"][status] = name
+        return entry
 
     # ------------------------------------------------------------------ widget data
 
