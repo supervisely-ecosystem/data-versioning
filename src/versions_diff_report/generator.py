@@ -168,6 +168,19 @@ def _row(key: Any, items: List[Any]) -> dict:
     return {"id": str(key), "items": items, "row": {}}
 
 
+def _count(value: Any) -> str:
+    """A count as a person reads one: `439 906`, not `439906`.
+
+    Grouped with a narrow no-break space rather than a locale's separator - a report is read
+    by whoever it was sent to, and a comma or a full stop inside a number means different
+    things to different readers. Non-breaking so a count never splits over a line break.
+    """
+    try:
+        return f"{int(value):,}".replace(",", "\u202f")
+    except (TypeError, ValueError):
+        return _text(value)
+
+
 def _text(value: Any) -> str:
     """Any value as the text of a row.
 
@@ -615,7 +628,7 @@ class VersionsDiffReport:
                     "_path": path,
                     "path": _text(path) if path else "—",
                     "summary": ", ".join(
-                        f"{count} {STATUS_LABELS.get(status, status)}"
+                        f"{_count(count)} {STATUS_LABELS.get(status, status)}"
                         for status, count in sorted(counts.items())
                         if count and status != ITEM_COUNT_KEY
                     ),
@@ -756,7 +769,7 @@ class VersionsDiffReport:
         """
         classes = record.get("classes") or {}
 
-        return ", ".join(f"{_text(name)} {count}" for name, count in classes.items())
+        return ", ".join(f"{_text(name)} {_count(count)}" for name, count in classes.items())
 
     @staticmethod
     def _previous(record: dict) -> Optional[str]:
@@ -820,7 +833,9 @@ class VersionsDiffReport:
         # The row is a heading for what hangs off it, and says so: `people · 5 figures`
         # reads as a group, where a bare class name reads as a duplicate of the line below.
         if figures:
-            parts["detail"] = _text(f"{len(figures)} figure" + ("s" if len(figures) > 1 else ""))
+            parts["detail"] = _text(
+                f"{_count(len(figures))} figure" + ("s" if len(figures) > 1 else "")
+            )
         # An object with no figures in either version has nothing to take a class from -
         # only a figure carries one - so the noun is all there is to put on the row, and
         # without it the row is an icon and an id.
