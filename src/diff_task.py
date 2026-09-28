@@ -199,13 +199,15 @@ def run(
     except DiffUnsupported as refusal:
         # `message` is a reserved LogRecord field, so the refusal goes in as one value.
         logger.info("Version diff refused", extra={**log_meta, "refusal": refusal.detail})
-        return _write_final_status(
-            api,
-            team_id,
-            remote_dir,
-            {**status, "status": STATUS_UNSUPPORTED, "finishedAt": _now(), **refusal.detail},
-            log_meta,
-        )
+        unsupported = {
+            **status,
+            "status": STATUS_UNSUPPORTED,
+            "finishedAt": _now(),
+            **refusal.detail,
+        }
+        # What this task concluded, whether or not it was the one to record it: the caller
+        # reports the outcome to the person who started it either way.
+        return _write_final_status(api, team_id, remote_dir, unsupported, log_meta) or unsupported
     except Exception as error:
         logger.error("Version diff failed", extra=log_meta, exc_info=True)
         _write_final_status(
@@ -253,10 +255,10 @@ def run(
     # After the status, never before: the marker is what the versions tab believes without
     # opening the directory, so it must not outrun the thing it vouches for. A pair taken
     # over by another task is not marked here - that task will mark it when it finishes.
-    if final.get("status") == STATUS_DONE:
+    if final is not None:
         _write_done_marker(api, team_id, project_id, version_id_from, version_id_to)
 
-    return final
+    return final or {**status, "status": STATUS_DONE}
 
 
 def read_status(api: sly.Api, team_id: int, remote_dir: str) -> Optional[dict]:
@@ -349,7 +351,7 @@ def _publish(
 def _write_final_status(
     api: sly.Api, team_id: int, remote_dir: str, payload: dict, log_meta: dict
 ) -> dict:
-    """The closing write, unless another task has taken the pair over meanwhile.
+    """The closing write, or None when another task has taken the pair over meanwhile.
 
     The liveness check at the start can be passed by two tasks at once, or fail open when
     the task api does not answer. Whichever started last owns the directory then, and a
@@ -362,7 +364,9 @@ def _write_final_status(
             f"Task {owner} took this pair over; not recording {payload['status']}",
             extra=log_meta,
         )
-        return payload
+        # Not the payload: it says `done`, and a caller that cannot tell "written" from
+        # "refused" goes on to vouch for a directory this task no longer owns.
+        return None
     return _write_status(api, team_id, remote_dir, payload)
 
 
