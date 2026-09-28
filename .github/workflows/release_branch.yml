@@ -68,6 +68,9 @@ jobs:
     uses: supervisely-ecosystem/workflows/.github/workflows/build_image_from_template.yml@master
     with:
       tag_version: "test"
+      # dev_requirements.txt pins the SDK to a commit, so the release tag cannot be
+      # resolved from it and the runtime base image would be looked up as ":test".
+      tag_ref_name: "6.74.23"
       skip_tag_check: true
 
   Supervisely-Release-Branch:

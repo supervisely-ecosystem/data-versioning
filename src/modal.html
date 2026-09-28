@@ -18,6 +18,11 @@
             value="restore_preview"
             :disabled="true"
           ></el-option>
+          <el-option
+            label="Compare Versions"
+            value="diff"
+            :disabled="true"
+          ></el-option>
         </el-select>
       </sly-field>
       <sly-field title="Name" v-if="state.actionType === 'create'">
