@@ -379,8 +379,11 @@ def _write_done_marker(
     try:
         with TemporaryDirectory() as tmp_dir:
             local_path = os.path.join(tmp_dir, os.path.basename(path))
+            # Not empty: a zero-byte upload comes back with nothing to read and the SDK
+            # raises IndexError on it. The line is for whoever opens the file by hand - the
+            # tab reads the name and nothing else.
             with open(local_path, "w", encoding="utf-8") as f:
-                f.write("")
+                f.write(f"{_now()}\n")
             api.file.upload(team_id, local_path, path)
     except Exception as e:
         logger.warning(f"Could not write the done marker {path}: {e}")
