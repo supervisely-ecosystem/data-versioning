@@ -57,6 +57,25 @@ PUBLISH_SLICE = 200
 # the diff it belongs to.
 REPORT_FILE_NAME = "report.json"
 
+# Written beside the pair's directory, not inside it, once the pair is done.
+#
+# The versions tab needs one thing about every pair at once - is there a report to open -
+# and a file inside the directory can only be seen by listing that directory, which is one
+# request per pair. A name at the top answers for every pair in a single listing, and the
+# answer does not grow with the size of a diff the way the directory does.
+#
+# Only on success, and never removed: `/system/` has no delete, so presence is the whole
+# meaning. A pair that failed simply has no marker, and why it failed is in its `status.json`
+# - read for the one pair a person actually opens.
+DONE_MARKER_SUFFIX = ".done"
+
+
+def done_marker_path(project_id: int, version_id_from: int, version_id_to: int) -> str:
+    return (
+        f"{TF_VERSIONS_DIR}/{project_id}/{TF_DIFFS_DIR_NAME}/"
+        f"{version_id_from}_{version_id_to}{DONE_MARKER_SUFFIX}"
+    )
+
 
 STATUS_IN_PROGRESS = "in_progress"
 STATUS_DONE = "done"
@@ -217,8 +236,8 @@ def run(
             **stats,
         },
     )
-    # Last write, and only now: everything the report needs is already uploaded.
-    return _write_final_status(
+    # Last two writes, and only now: everything the report needs is already uploaded.
+    final = _write_final_status(
         api,
         team_id,
         remote_dir,
@@ -231,6 +250,13 @@ def run(
         },
         log_meta,
     )
+    # After the status, never before: the marker is what the versions tab believes without
+    # opening the directory, so it must not outrun the thing it vouches for. A pair taken
+    # over by another task is not marked here - that task will mark it when it finishes.
+    if final.get("status") == STATUS_DONE:
+        _write_done_marker(api, team_id, project_id, version_id_from, version_id_to)
+
+    return final
 
 
 def read_status(api: sly.Api, team_id: int, remote_dir: str) -> Optional[dict]:
@@ -338,6 +364,26 @@ def _write_final_status(
         )
         return payload
     return _write_status(api, team_id, remote_dir, payload)
+
+
+def _write_done_marker(
+    api: sly.Api, team_id: int, project_id: int, version_id_from: int, version_id_to: int
+) -> None:
+    """Announce a finished pair where one listing of `diffs/` can see it.
+
+    Best effort: the comparison is done and its report is readable whether or not this
+    lands, and the tab falls back to the pair's own directory for anything it cannot see
+    here. Failing the task over a hint would be worse than the hint being missing.
+    """
+    path = done_marker_path(project_id, version_id_from, version_id_to)
+    try:
+        with TemporaryDirectory() as tmp_dir:
+            local_path = os.path.join(tmp_dir, os.path.basename(path))
+            with open(local_path, "w", encoding="utf-8") as f:
+                f.write("")
+            api.file.upload(team_id, local_path, path)
+    except Exception as e:
+        logger.warning(f"Could not write the done marker {path}: {e}")
 
 
 def _write_status(api: sly.Api, team_id: int, remote_dir: str, payload: dict) -> dict:
