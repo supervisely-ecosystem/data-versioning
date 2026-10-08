@@ -15,6 +15,7 @@ class ActionType:
     RESTORE = "restore"
     ENABLE_PREVIEW = "enable_preview"
     RESTORE_PREVIEW = "restore_preview"
+    DIFF = "diff"
 
 
 api: sly.Api = sly.Api.from_env()
@@ -35,6 +36,8 @@ version_name = None
 version_description = None
 version_id = None
 version_num = None
+version_id_from = None
+version_id_to = None
 if action == ActionType.CREATE:
     PROJECT_ID = int(os.getenv("PROJECT_ID"))
     version_name = str(os.environ.get("modal.state.versionName"))
@@ -50,6 +53,14 @@ elif action in (ActionType.RESTORE, ActionType.ENABLE_PREVIEW):
 elif action == ActionType.RESTORE_PREVIEW:
     PROJECT_ID = int(os.environ.get("modal.state.sourceProjectId"))
     version_id = int(os.environ.get("modal.state.versionId"))
+elif action == ActionType.DIFF:
+    PROJECT_ID = int(os.getenv("PROJECT_ID"))
+    version_id_from = int(os.environ.get("modal.state.versionIdFrom"))
+    version_id_to = int(os.environ.get("modal.state.versionIdTo"))
+else:
+    # Every branch above defines PROJECT_ID; without this the app used to die in main()
+    # with a NameError instead of saying what it was asked to do.
+    raise ValueError(f"Unknown action type: {action}")
 
 create_meta = {"customNodeSettings": {"title": "<h4>Create New Version</h4>"}}
 restore_meta = {"customNodeSettings": {"title": "<h4>Restore From Version</h4>"}}
